@@ -28,7 +28,7 @@ import cdsapi
 
 DATASET = "reanalysis-era5-single-levels"
 OUT_DIR = Path("data/raw/era5")
-AREA = [66, 10, 53.5, 30]  # North, West, South, East: Baltics, Finland, S/C Sweden, N Poland
+AREA = [71.5, 4, 47, 32]  # North, West, South, East - Nordics, Baltics, Poland, Germany
 VARIABLES = [
     "100m_u_component_of_wind",
     "100m_v_component_of_wind",
