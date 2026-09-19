@@ -1,0 +1,81 @@
+-- Clean layer: everything aggregated to whole hours (UTC) and reshaped to one column per variable.
+-- MW values are averaged within the hour, so an hourly MW value equals the MWh produced in that hour.
+
+-- Day-ahead prices per zone. Since 2025-10-01 prices are 15-minute, so an hour has 4 of them.
+CREATE OR REPLACE VIEW price_hourly AS
+SELECT
+    date_trunc('hour', ts_utc) AS ts_utc,
+    zone,
+    avg(value)                 AS price_eur_mwh,
+    count(*)                   AS n_intervals   -- 1 = hourly price, 4 = four 15-min prices
+FROM entsoe_raw
+WHERE dataset = 'da_price'
+GROUP BY 1, 2;
+
+-- One row per hour, one price column per zone.
+CREATE OR REPLACE VIEW price_hourly_wide AS
+SELECT
+    ts_utc,
+    max(price_eur_mwh) FILTER (WHERE zone = 'LT')   AS price_lt,
+    max(price_eur_mwh) FILTER (WHERE zone = 'LV')   AS price_lv,
+    max(price_eur_mwh) FILTER (WHERE zone = 'EE')   AS price_ee,
+    max(price_eur_mwh) FILTER (WHERE zone = 'FI')   AS price_fi,
+    max(price_eur_mwh) FILTER (WHERE zone = 'SE_4') AS price_se4,
+    max(price_eur_mwh) FILTER (WHERE zone = 'PL')   AS price_pl
+FROM price_hourly
+GROUP BY ts_utc;
+
+-- Lithuanian generation. Storage is net (negative while pumping or charging).
+CREATE OR REPLACE VIEW lt_generation_hourly AS
+WITH per_series AS (
+    SELECT date_trunc('hour', ts_utc) AS ts_utc, series, avg(value) AS mw
+    FROM entsoe_raw
+    WHERE dataset = 'generation' AND zone = 'LT'
+    GROUP BY 1, 2
+)
+SELECT
+    ts_utc,
+    sum(mw) FILTER (WHERE series = 'Wind Onshore') AS wind_mw,
+    sum(mw) FILTER (WHERE series = 'Solar')        AS solar_mw,
+    sum(mw)                                        AS total_generation_mw
+FROM per_series
+GROUP BY ts_utc;
+
+-- Lithuanian load: actual value and the day-ahead forecast.
+CREATE OR REPLACE VIEW lt_load_hourly AS
+SELECT
+    date_trunc('hour', ts_utc)                          AS ts_utc,
+    avg(value) FILTER (WHERE dataset = 'load')          AS load_mw,
+    avg(value) FILTER (WHERE dataset = 'load_forecast') AS load_forecast_mw
+FROM entsoe_raw
+WHERE zone = 'LT' AND dataset IN ('load', 'load_forecast')
+GROUP BY 1;
+
+-- Day-ahead wind and solar generation forecasts for Lithuania.
+CREATE OR REPLACE VIEW lt_res_forecast_hourly AS
+SELECT
+    date_trunc('hour', ts_utc)                        AS ts_utc,
+    avg(value) FILTER (WHERE series = 'Wind Onshore') AS wind_forecast_mw,
+    avg(value) FILTER (WHERE series = 'Solar')        AS solar_forecast_mw
+FROM entsoe_raw
+WHERE zone = 'LT' AND dataset = 'wind_solar_forecast'
+GROUP BY 1;
+
+-- ERA5 indices: wind for every region, temperature and solar radiation for Lithuania.
+CREATE OR REPLACE VIEW weather_hourly AS
+SELECT
+    ts_utc,
+    max(wind_cf)            FILTER (WHERE region = 'LT') AS wind_cf_lt,
+    max(wind_cf)            FILTER (WHERE region = 'LV') AS wind_cf_lv,
+    max(wind_cf)            FILTER (WHERE region = 'EE') AS wind_cf_ee,
+    max(wind_cf)            FILTER (WHERE region = 'FI') AS wind_cf_fi,
+    max(wind_cf)            FILTER (WHERE region = 'SE') AS wind_cf_se,
+    max(wind_cf)            FILTER (WHERE region = 'NO') AS wind_cf_no,
+    max(wind_cf)            FILTER (WHERE region = 'DK') AS wind_cf_dk,
+    max(wind_cf)            FILTER (WHERE region = 'PL') AS wind_cf_pl,
+    max(wind_cf)            FILTER (WHERE region = 'DE') AS wind_cf_de,
+    max(wind_speed_100m_ms) FILTER (WHERE region = 'LT') AS wind_speed_lt_ms,
+    max(t2m_c)              FILTER (WHERE region = 'LT') AS temp_lt_c,
+    max(ssrd_wm2)           FILTER (WHERE region = 'LT') AS solar_rad_lt_wm2
+FROM era5_regions
+GROUP BY ts_utc;
