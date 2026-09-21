@@ -48,9 +48,17 @@ FROM (
 )
 WHERE gap > INTERVAL 1 HOUR;
 
+-- Hydro weeks where a bidding zone is missing, which would make the total look too low.
+CREATE OR REPLACE VIEW qa_hydro_missing_zones AS
+SELECT h.*
+FROM hydro_weekly h
+JOIN (SELECT area, max(n_zones) AS expected FROM hydro_weekly GROUP BY area) m USING (area)
+WHERE h.n_zones < m.expected;
+
 CREATE OR REPLACE VIEW qa_summary AS
 SELECT 'missing LT price hours' AS check_name, count(*) AS problems FROM qa_missing_price_hours
-UNION ALL SELECT 'incomplete price hours', count(*) FROM qa_incomplete_price_hours
-UNION ALL SELECT 'duplicate raw rows',     count(*) FROM qa_duplicates
-UNION ALL SELECT 'prices out of range',    count(*) FROM qa_price_out_of_range
-UNION ALL SELECT 'gaps in ERA5 series',    count(*) FROM qa_weather_gaps;
+UNION ALL SELECT 'incomplete price hours',     count(*) FROM qa_incomplete_price_hours
+UNION ALL SELECT 'duplicate raw rows',         count(*) FROM qa_duplicates
+UNION ALL SELECT 'prices out of range',        count(*) FROM qa_price_out_of_range
+UNION ALL SELECT 'gaps in ERA5 series',        count(*) FROM qa_weather_gaps
+UNION ALL SELECT 'hydro weeks missing a zone', count(*) FROM qa_hydro_missing_zones;

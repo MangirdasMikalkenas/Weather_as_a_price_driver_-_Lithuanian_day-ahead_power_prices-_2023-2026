@@ -32,10 +32,15 @@ with_calendar AS (
 )
 SELECT
     c.*,
-    lag24.price_lt  AS price_lag_24h,   -- same hour yesterday
-    lag168.price_lt AS price_lag_168h,  -- same hour a week ago
-    gas.ttf_eur_mwh                     -- last TTF close BEFORE the delivery day
+    lag24.price_lt        AS price_lag_24h,              -- same hour yesterday
+    lag168.price_lt       AS price_lag_168h,             -- same hour a week ago
+    gas.ttf_eur_mwh,                                     -- last TTF close BEFORE the delivery day
+    hydro.reservoir_gwh   AS nordic_hydro_gwh,           -- Nordic reservoirs in the current week
+    hydro.deviation_gwh   AS nordic_hydro_deviation_gwh  -- vs the 2015-2022 normal for that week
 FROM with_calendar c
 LEFT JOIN price_hourly_wide lag24  ON lag24.ts_utc  = c.ts_utc - INTERVAL 24 HOUR
 LEFT JOIN price_hourly_wide lag168 ON lag168.ts_utc = c.ts_utc - INTERVAL 168 HOUR
-ASOF LEFT JOIN gas_daily gas ON c.date_local > gas.trade_date;
+ASOF LEFT JOIN gas_daily gas ON c.date_local > gas.trade_date
+ASOF LEFT JOIN (
+    SELECT week_start, reservoir_gwh, deviation_gwh FROM hydro_weekly WHERE area = 'NORDIC'
+) hydro ON c.date_local >= hydro.week_start;

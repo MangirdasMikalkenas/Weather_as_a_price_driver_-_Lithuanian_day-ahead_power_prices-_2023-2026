@@ -79,3 +79,40 @@ SELECT
     max(ssrd_wm2)           FILTER (WHERE region = 'LT') AS solar_rad_lt_wm2
 FROM era5_regions
 GROUP BY ts_utc;
+
+-- Nordic hydro reservoirs: weekly stored energy per country and in total, compared with the
+-- average of the same week of the year in 2015-2022 (the "normal" level for that week).
+CREATE OR REPLACE VIEW hydro_weekly AS
+WITH per_zone AS (
+    SELECT
+        -- Monday of the week; +12 h absorbs the zones' different UTC offsets at midnight
+        CAST(date_trunc('week', ts_utc + INTERVAL 12 HOUR) AS DATE) AS week_start,
+        split_part(zone, '_', 1)                                    AS country,  -- NO_1 -> NO
+        value / 1000                                                AS gwh       -- MWh -> GWh
+    FROM entsoe_raw
+    WHERE dataset = 'hydro_reservoirs'
+),
+per_area AS (
+    SELECT week_start, country AS area, sum(gwh) AS reservoir_gwh, count(*) AS n_zones
+    FROM per_zone
+    GROUP BY 1, 2
+    UNION ALL
+    SELECT week_start, 'NORDIC' AS area, sum(gwh), count(*)
+    FROM per_zone
+    GROUP BY 1
+),
+normal AS (
+    SELECT area, weekofyear(week_start) AS iso_week, avg(reservoir_gwh) AS normal_gwh
+    FROM per_area
+    WHERE isoyear(week_start) BETWEEN 2015 AND 2022
+    GROUP BY 1, 2
+)
+SELECT
+    p.week_start,
+    p.area,
+    p.n_zones,
+    p.reservoir_gwh,
+    n.normal_gwh,
+    p.reservoir_gwh - n.normal_gwh AS deviation_gwh  -- > 0: more water than normal
+FROM per_area p
+LEFT JOIN normal n ON n.area = p.area AND n.iso_week = weekofyear(p.week_start);
