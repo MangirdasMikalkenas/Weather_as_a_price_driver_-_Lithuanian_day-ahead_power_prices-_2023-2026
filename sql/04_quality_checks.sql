@@ -48,12 +48,12 @@ FROM (
 )
 WHERE gap > INTERVAL 1 HOUR;
 
--- Hydro weeks where a bidding zone is missing, which would make the total look too low.
+-- Hydro weeks where a bidding zone did not report. They are excluded from the normal and from
+-- lt_hourly (the previous complete week is used instead), so this is a report, not an error.
 CREATE OR REPLACE VIEW qa_hydro_missing_zones AS
-SELECT h.*
-FROM hydro_weekly h
-JOIN (SELECT area, max(n_zones) AS expected FROM hydro_weekly GROUP BY area) m USING (area)
-WHERE h.n_zones < m.expected;
+SELECT *
+FROM hydro_weekly
+WHERE NOT is_complete;
 
 CREATE OR REPLACE VIEW qa_summary AS
 SELECT 'missing LT price hours' AS check_name, count(*) AS problems FROM qa_missing_price_hours
@@ -61,4 +61,4 @@ UNION ALL SELECT 'incomplete price hours',     count(*) FROM qa_incomplete_price
 UNION ALL SELECT 'duplicate raw rows',         count(*) FROM qa_duplicates
 UNION ALL SELECT 'prices out of range',        count(*) FROM qa_price_out_of_range
 UNION ALL SELECT 'gaps in ERA5 series',        count(*) FROM qa_weather_gaps
-UNION ALL SELECT 'hydro weeks missing a zone', count(*) FROM qa_hydro_missing_zones;
+UNION ALL SELECT 'hydro weeks missing a zone (excluded)', count(*) FROM qa_hydro_missing_zones;

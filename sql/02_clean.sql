@@ -101,18 +101,24 @@ per_area AS (
     FROM per_zone
     GROUP BY 1
 ),
+flagged AS (
+    -- a week is complete when every zone of the area reported; otherwise the sum is too low
+    SELECT *, n_zones = max(n_zones) OVER (PARTITION BY area) AS is_complete
+    FROM per_area
+),
 normal AS (
     SELECT area, weekofyear(week_start) AS iso_week, avg(reservoir_gwh) AS normal_gwh
-    FROM per_area
-    WHERE isoyear(week_start) BETWEEN 2015 AND 2022
+    FROM flagged
+    WHERE is_complete AND isoyear(week_start) BETWEEN 2015 AND 2022
     GROUP BY 1, 2
 )
 SELECT
-    p.week_start,
-    p.area,
-    p.n_zones,
-    p.reservoir_gwh,
+    f.week_start,
+    f.area,
+    f.n_zones,
+    f.is_complete,
+    f.reservoir_gwh,
     n.normal_gwh,
-    p.reservoir_gwh - n.normal_gwh AS deviation_gwh  -- > 0: more water than normal
-FROM per_area p
-LEFT JOIN normal n ON n.area = p.area AND n.iso_week = weekofyear(p.week_start);
+    f.reservoir_gwh - n.normal_gwh AS deviation_gwh  -- > 0: more water than normal
+FROM flagged f
+LEFT JOIN normal n ON n.area = f.area AND n.iso_week = weekofyear(f.week_start);

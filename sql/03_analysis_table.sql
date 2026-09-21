@@ -42,5 +42,7 @@ LEFT JOIN price_hourly_wide lag24  ON lag24.ts_utc  = c.ts_utc - INTERVAL 24 HOU
 LEFT JOIN price_hourly_wide lag168 ON lag168.ts_utc = c.ts_utc - INTERVAL 168 HOUR
 ASOF LEFT JOIN gas_daily gas ON c.date_local > gas.trade_date
 ASOF LEFT JOIN (
-    SELECT week_start, reservoir_gwh, deviation_gwh FROM hydro_weekly WHERE area = 'NORDIC'
+    SELECT week_start, reservoir_gwh, deviation_gwh
+    FROM hydro_weekly
+    WHERE area = 'NORDIC' AND is_complete  -- an incomplete week falls back to the previous week
 ) hydro ON c.date_local >= hydro.week_start;
