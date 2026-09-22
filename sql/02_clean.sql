@@ -42,14 +42,29 @@ FROM per_series
 GROUP BY ts_utc;
 
 -- Lithuanian load: actual value and the day-ahead forecast.
+-- Real day-ahead load forecasts miss by a few per cent. A forecast value of zero, or an hourly
+-- forecast that misses the actual load by more than 50 %, is therefore a data error and set to NULL.
 CREATE OR REPLACE VIEW lt_load_hourly AS
+WITH hourly AS (
+    SELECT
+        date_trunc('hour', ts_utc)                                        AS ts_utc,
+        avg(value) FILTER (WHERE dataset = 'load')                        AS load_mw,
+        avg(value) FILTER (WHERE dataset = 'load_forecast' AND value > 0) AS load_forecast_raw_mw,
+        count(*)   FILTER (WHERE dataset = 'load_forecast' AND value <= 0) AS n_zero_forecasts
+    FROM entsoe_raw
+    WHERE zone = 'LT' AND dataset IN ('load', 'load_forecast')
+    GROUP BY 1
+)
 SELECT
-    date_trunc('hour', ts_utc)                          AS ts_utc,
-    avg(value) FILTER (WHERE dataset = 'load')          AS load_mw,
-    avg(value) FILTER (WHERE dataset = 'load_forecast') AS load_forecast_mw
-FROM entsoe_raw
-WHERE zone = 'LT' AND dataset IN ('load', 'load_forecast')
-GROUP BY 1;
+    ts_utc,
+    load_mw,
+    load_forecast_raw_mw,
+    n_zero_forecasts,
+    CASE
+        WHEN load_mw > 0 AND abs(load_forecast_raw_mw - load_mw) / load_mw > 0.5 THEN NULL
+        ELSE load_forecast_raw_mw
+    END AS load_forecast_mw
+FROM hourly;
 
 -- Day-ahead wind and solar generation forecasts for Lithuania.
 CREATE OR REPLACE VIEW lt_res_forecast_hourly AS

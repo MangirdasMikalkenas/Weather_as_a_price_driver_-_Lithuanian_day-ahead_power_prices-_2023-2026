@@ -55,10 +55,19 @@ SELECT *
 FROM hydro_weekly
 WHERE NOT is_complete;
 
+-- Hours whose load forecast was a data error: zero values, or more than 50 % away from the actual load.
+-- These forecasts are set to NULL in lt_load_hourly, so this is a report, not an error.
+CREATE OR REPLACE VIEW qa_load_forecast_removed AS
+SELECT ts_utc, load_mw, load_forecast_raw_mw, n_zero_forecasts
+FROM lt_load_hourly
+WHERE n_zero_forecasts > 0
+   OR (load_forecast_raw_mw IS NOT NULL AND load_forecast_mw IS NULL);
+
 CREATE OR REPLACE VIEW qa_summary AS
 SELECT 'missing LT price hours' AS check_name, count(*) AS problems FROM qa_missing_price_hours
 UNION ALL SELECT 'incomplete price hours',     count(*) FROM qa_incomplete_price_hours
 UNION ALL SELECT 'duplicate raw rows',         count(*) FROM qa_duplicates
 UNION ALL SELECT 'prices out of range',        count(*) FROM qa_price_out_of_range
 UNION ALL SELECT 'gaps in ERA5 series',        count(*) FROM qa_weather_gaps
-UNION ALL SELECT 'hydro weeks missing a zone (excluded)', count(*) FROM qa_hydro_missing_zones;
+UNION ALL SELECT 'hydro weeks missing a zone (excluded)', count(*) FROM qa_hydro_missing_zones
+UNION ALL SELECT 'load forecast hours cleaned (excluded)', count(*) FROM qa_load_forecast_removed;
