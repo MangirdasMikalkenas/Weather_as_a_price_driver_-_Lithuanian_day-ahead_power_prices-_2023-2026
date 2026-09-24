@@ -1,0 +1,8 @@
+follow-up finding,estimate
+All three regions +10 pp at once,-20.4 €/MWh (95% CI -22.2 to -18.6)
+Best regional grouping (lowest AIC),A: SE+FI and NO+DK
+Effect per 100 MW of wind output (2SLS),"-1.55 (2023) → -1.95 (2026) €/MWh, change p = 0.617"
+Extra wind effect during the Estlink 2 outage (+10 pp),-5.11 €/MWh (p = 0.000); with a wind effect for every month -8.07 €/MWh
+Extra wind effect after synchronisation (+10 pp),-1.28 €/MWh (p = 0.420)
+"Wind effect, tight − other hours (+10 pp)",-4.01 €/MWh (p = 0.003)
+Wind × gas interaction in tight hours,-0.041 (p = 0.649; tight vs other p = 0.883)
