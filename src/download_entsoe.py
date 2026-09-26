@@ -13,6 +13,9 @@ they are stored as published and aggregated to hours later.
 Nordic hydro reservoir filling (weekly, MWh of stored energy) starts in 2015: the years
 before 2023 are only used to compute what a "normal" filling level is for each week.
 
+Day-ahead load, wind and solar forecasts are downloaded for Lithuania and the zones around it
+(the price forecast in question 3 uses the neighbours' forecasts too).
+
 Setup: put your token into .env in the repository root
     ENTSOE_API_KEY=<your-token>
 
@@ -33,6 +36,7 @@ TZ = "Europe/Vilnius"
 END = pd.Timestamp("2026-09-01", tz=TZ)  # exclusive: the last full month is August 2026
 
 PRICE_ZONES = ["LT", "LV", "EE", "FI", "SE_4", "PL"]
+FORECAST_ZONES = ["LT", "LV", "EE", "FI", "SE_3", "SE_4", "PL", "DE_LU"]
 HYDRO_ZONES = ["NO_1", "NO_2", "NO_3", "NO_4", "NO_5", "SE_1", "SE_2", "SE_3", "SE_4", "FI"]
 
 # dataset name -> (zones, first year, query function)
@@ -40,8 +44,8 @@ DATASETS = {
     "da_price": (PRICE_ZONES, 2023, lambda c, z, s, e: c.query_day_ahead_prices(z, start=s, end=e)),
     "generation": (["LT"], 2023, lambda c, z, s, e: c.query_generation(z, start=s, end=e, nett=True)),
     "load": (["LT"], 2023, lambda c, z, s, e: c.query_load(z, start=s, end=e)),
-    "load_forecast": (["LT"], 2023, lambda c, z, s, e: c.query_load_forecast(z, start=s, end=e)),
-    "wind_solar_forecast": (["LT"], 2023,
+    "load_forecast": (FORECAST_ZONES, 2023, lambda c, z, s, e: c.query_load_forecast(z, start=s, end=e)),
+    "wind_solar_forecast": (FORECAST_ZONES, 2023,
                             lambda c, z, s, e: c.query_wind_and_solar_forecast(z, start=s, end=e)),
     "hydro_reservoirs": (HYDRO_ZONES, 2015,
                          lambda c, z, s, e: c.query_aggregate_water_reservoirs_and_hydro_storage(

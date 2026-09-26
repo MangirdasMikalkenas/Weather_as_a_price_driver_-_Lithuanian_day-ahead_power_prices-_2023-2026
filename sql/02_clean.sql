@@ -76,6 +76,24 @@ FROM entsoe_raw
 WHERE zone = 'LT' AND dataset = 'wind_solar_forecast'
 GROUP BY 1;
 
+-- Day-ahead forecasts of load, wind and solar for Lithuania and the zones around it (question 3).
+-- One row per zone and hour. Wind is onshore plus offshore; a load forecast of zero is a data error.
+CREATE OR REPLACE VIEW forecast_hourly_zone AS
+WITH per_series AS (
+    SELECT date_trunc('hour', ts_utc) AS ts_utc, zone, dataset, series, avg(value) AS mw
+    FROM entsoe_raw
+    WHERE dataset IN ('load_forecast', 'wind_solar_forecast')
+    GROUP BY 1, 2, 3, 4
+)
+SELECT
+    ts_utc,
+    zone,
+    max(mw) FILTER (WHERE dataset = 'load_forecast' AND mw > 0)       AS load_fc_mw,
+    sum(mw) FILTER (WHERE series IN ('Wind Onshore', 'Wind Offshore')) AS wind_fc_mw,
+    max(mw) FILTER (WHERE series = 'Solar')                            AS solar_fc_mw
+FROM per_series
+GROUP BY 1, 2;
+
 -- ERA5 indices: wind for every region, temperature and solar radiation for Lithuania.
 CREATE OR REPLACE VIEW weather_hourly AS
 SELECT
