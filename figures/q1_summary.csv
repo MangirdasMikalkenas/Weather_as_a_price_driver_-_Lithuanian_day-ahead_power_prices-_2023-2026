@@ -1,6 +1,6 @@
 hypothesis,statement,estimate,verdict
-H1,Baltic wind lowers the price,-7.61 €/MWh per +10 pp (p = 0.0000),supported
-H2,The wind effect has grown,"-2.34 €/MWh per +10 pp, 2023 → 2026 (p = 0.0402); steady growth in Jan–Aug: False",partly supported
+H1,Baltic wind lowers the price,-7.61 €/MWh per +10 pp (p < 0.001),supported
+H2,The wind effect has grown,"-2.34 €/MWh per +10 pp, 2023 → 2026 (p = 0.040); steady growth in Jan–Aug: False",partly supported
 H3,Regional wind matters; Baltic effect overstated without it,Baltic -11.38 → -7.61 €/MWh per +10 pp,supported
-H4,Wind lowers the price more when gas is expensive,interaction -0.036 (p = 0.3856),not supported
-H5,More Nordic hydro than normal lowers the price,4.99 €/MWh per +10 TWh (p = 0.0063; clustered by month p = 0.049),not supported
+H4,Wind lowers the price more when gas is expensive,interaction -0.036 (p = 0.386),not supported
+H5,More Nordic hydro than normal lowers the price,4.99 €/MWh per +10 TWh (p = 0.006; clustered by month p = 0.049),not supported

@@ -1,0 +1,3 @@
+hypothesis,statement,estimate,verdict
+H6,Wind output falls below what the wind allows when prices are negative,18.1% lower output than profitable hours with the same expected output (p < 0.001); placebo 0–10 €/MWh: 0.9% (p = 0.703),supported
+H7,Capture rates below 1 and falling; solar lower and falling faster,"2025: wind 0.81, solar 0.59; trend per year: wind +0.3 pp (p = 0.744), solar -8.4 pp (p < 0.001)",partly supported
