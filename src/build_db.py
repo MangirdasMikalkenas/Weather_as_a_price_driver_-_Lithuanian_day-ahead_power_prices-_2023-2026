@@ -39,6 +39,11 @@ SOURCES = {
         "SELECT trade_date, ttf_eur_mwh FROM read_csv('{files}', header = true, "
         "types = {{'trade_date': 'DATE', 'ttf_eur_mwh': 'DOUBLE'}})",
     ),
+    "eua_daily": (
+        "data/raw/gas/eua_proxy_daily.csv",
+        "SELECT trade_date, eua_proxy FROM read_csv('{files}', header = true, "
+        "types = {{'trade_date': 'DATE', 'eua_proxy': 'DOUBLE'}})",
+    ),
 }
 
 
@@ -64,7 +69,9 @@ def main():
     print("\nData quality checks (0 = no problems found):")
     print(con.sql("SELECT * FROM qa_summary"))
     rows = con.execute("SELECT count(*) FROM lt_hourly").fetchone()[0]
-    print(f"lt_hourly: {rows:,} hours ready for analysis")
+    print(f"lt_hourly: {rows:,} hours ready for analysis (questions 1-2, to August 2026)")
+    rows = con.execute("SELECT count(*) FROM lt_hourly_all").fetchone()[0]
+    print(f"lt_hourly_all: {rows:,} hours (question 3, all available data)")
     con.close()
 
 

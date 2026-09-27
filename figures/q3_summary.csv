@@ -1,0 +1,3 @@
+hypothesis,statement,estimate,verdict
+H8,The model beats the naive benchmark,"ensemble MAE 24.57 vs naive 41.80 €/MWh (41% lower, DM p < 0.001)",supported
+H9,Knowing the actual Lithuanian wind output makes the forecast significantly more accurate,"ensemble MAE 27.77 vs 27.09 €/MWh (2% higher, DM p = 0.064; 3% higher without negative-price hours)",not supported

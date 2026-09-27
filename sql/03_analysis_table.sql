@@ -1,6 +1,8 @@
 -- Analysis layer: one row per hour with a Lithuanian price and everything we know about that hour.
+-- lt_hourly_all holds all available hours (question 3 uses September 2026 as a fresh test);
+-- lt_hourly keeps the fixed analysis period of questions 1 and 2 (January 2023 - August 2026).
 
-CREATE OR REPLACE VIEW lt_hourly AS
+CREATE OR REPLACE VIEW lt_hourly_all AS
 WITH base AS (
     SELECT
         p.ts_utc,
@@ -46,3 +48,7 @@ ASOF LEFT JOIN (
     FROM hydro_weekly
     WHERE area = 'NORDIC' AND is_complete  -- an incomplete week falls back to the previous week
 ) hydro ON c.date_local >= hydro.week_start;
+
+CREATE OR REPLACE VIEW lt_hourly AS
+SELECT * FROM lt_hourly_all
+WHERE ts_local < TIMESTAMP '2026-09-01';

@@ -1,0 +1,6 @@
+additional finding,estimate
+Ensemble vs LightGBM alone,-0.53 €/MWh (p = 0.191)
+Re-training monthly instead of daily/weekly (ENTSO-E set),MAE 27.1 vs 24.6 €/MWh (10% higher)
+ERA5 reanalysis wind instead of the operators' forecasts,MAE 28.4 vs 27.1 €/MWh (p = 0.003)
+Share of the price error explained by Lithuanian forecast errors,0.1%
+Most important LightGBM feature,"Poland residual load forecast, same hour (30% of total gain)"

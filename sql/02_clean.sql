@@ -94,6 +94,14 @@ SELECT
 FROM per_series
 GROUP BY 1, 2;
 
+-- Cross-border capacity offered to the day-ahead market coupling, one row per border and hour.
+-- SE_4-LT is the capacity from SE4 into Lithuania.
+CREATE OR REPLACE VIEW ntc_hourly_border AS
+SELECT date_trunc('hour', ts_utc) AS ts_utc, zone AS border, avg(value) AS mw
+FROM entsoe_raw
+WHERE dataset = 'offered_capacity'
+GROUP BY 1, 2;
+
 -- ERA5 indices: wind for every region, temperature and solar radiation for Lithuania.
 CREATE OR REPLACE VIEW weather_hourly AS
 SELECT

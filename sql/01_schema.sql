@@ -22,3 +22,8 @@ CREATE OR REPLACE TABLE gas_daily (
     trade_date   DATE NOT NULL,  -- trading day
     ttf_eur_mwh  DOUBLE          -- TTF front-month closing price, EUR/MWh
 );
+
+CREATE OR REPLACE TABLE eua_daily (
+    trade_date   DATE NOT NULL,  -- trading day
+    eua_proxy    DOUBLE          -- closing price of an EU carbon allowance futures fund (KEUA), USD
+);
