@@ -31,8 +31,8 @@ Nine hypotheses were tested: four were supported, two partly supported and three
 ```text
 .
 ├── README.md
-├── results_analysis.md          # results, recommendations and interpretation (top-down)
-├── requirements.txt             # the complete tested environment (pip freeze)
+├── results_analysis.md          # results, recommendations and interpretation
+├── requirements.txt             # the complete tested environment
 ├── src/                         # data download, processing and database build
 │   ├── download_entsoe.py
 │   ├── download_era5.py
