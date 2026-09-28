@@ -21,6 +21,7 @@ executing==2.2.1
 fonttools==4.65.0
 formulaic==1.2.2
 geopandas==1.1.4
+holidays==0.105
 idna==3.20
 interface_meta==2.0.1
 ipykernel==7.3.0

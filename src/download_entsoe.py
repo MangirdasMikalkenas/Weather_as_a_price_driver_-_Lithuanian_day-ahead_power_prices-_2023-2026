@@ -1,11 +1,12 @@
 """
 Download ENTSO-E Transparency Platform data for Lithuania and neighbouring bidding zones.
 
-Output: one CSV per dataset / zone / year in data/raw/entsoe/, in a tidy "long" format
+Output: one CSV per dataset / zone / month in data/raw/entsoe/, in a tidy "long" format
     ts_utc, zone, dataset, series, value
 All timestamps are converted to UTC. Data are requested one month at a time and saved as
 one file per month (dataset_zone_YYYY_MM.csv); files from earlier runs with one file per
-year (dataset_zone_YYYY.csv) are kept and their year is skipped. Server errors are retried
+year (dataset_zone_YYYY.csv) are kept, and for those years only the months from EXTEND_FROM
+onwards are downloaded. Server errors are retried
 a few times; a month that still fails is reported and retried on the next run, because
 existing files are skipped. Delete a file to download it again.
 The API token never appears in printed messages.
