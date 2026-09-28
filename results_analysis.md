@@ -38,7 +38,7 @@ Storage revenue plans may need to allow for narrower spreads. In April–August 
 
 ### 1.4 Load forecasting and supply
 
-Correcting the grid operator's load forecast for rooftop solar would reduce its 2026 error by 30%. Subtracting the error that the solar forecast predicted over the previous 56 days cut the 2026 load forecast error from 138 to 97 MW ([section 13](#13-rooftop-solar-made-the-load-forecasts-error-23-times-larger-a-56-day-correction-cuts-it-by-30)).
+Correcting the grid operator's load forecast for rooftop solar would reduce its 2026 error by 30%. Subtracting the error that the solar forecast predicted over the previous 56 days cut the 2026 load forecast error from 138 to 97 MW ([section 13](#13-the-load-forecasts-error-grew-23-times-mostly-in-solar-hours-a-56-day-correction-cuts-it-by-30)).
 
 ---
 
@@ -50,9 +50,10 @@ Higher wind generation lowers the price because wind has near-zero marginal cost
 
 Wind in the three regions together moved the price more than any other weather variable. Scaled by one typical swing (one standard deviation, within the same hour, month and year), Baltic, Nordic and Continental wind moved the price by 12.3, 7.7 and 6.9 €/MWh, 26.9 €/MWh together; solar radiation by 12.4 €/MWh, the same as Baltic wind alone; the load forecast by 15.8, gas by 3.9 and Nordic hydro by 2.9 €/MWh ([01 §4.1](notebooks/01_price_drivers.ipynb)).
 
-Five independent checks support reading the 7.6 €/MWh as the effect of wind itself – a placebo with next week's wind, the ten wind deciles, an instrumental-variable estimate, an out-of-sample test and a leave-one-year-out test, detailed in Appendix A.2. If anything the 7.6 €/MWh is a lower bound, because ERA5 records the weather that occurred while the market clears on the forecasts made a day earlier.
+Five independent checks support reading the 7.6 €/MWh as the effect of wind itself – a placebo with next week's wind, the ten wind deciles, an instrumental-variable estimate, an out-of-sample test and a leave-one-year-out test, detailed in [Appendix A.2](#a2-notebook-01-price-drivers). The 7.6 €/MWh is more likely to understate than overstate the effect, because ERA5 records the weather that occurred while the market clears on the forecasts made a day earlier.
 
-![Price by wind decile](figures/q1_dose_response.png)
+![Price by wind decile](figures/q1_dose_response.svg)
+
 *Figure 1. Price by Baltic wind decile.* The windiest tenth of hours was about 50 €/MWh cheaper than the calmest ([01 §8.3](notebooks/01_price_drivers.ipynb)).
 
 ## 3. Neighbors' wind moves the Lithuanian price 98% as much as Baltic wind
@@ -63,32 +64,36 @@ Leaving the neighbors out makes Baltic wind look 50% stronger than it is: −11.
 
 The Nordic effect ran through the two countries connected to the Baltic states. +10 percentage points in Sweden and Finland lowered the price by 4.6 €/MWh and +10 percentage points in Norway and Denmark by 3.1 €/MWh; Norway alone, which has no cable to the Baltic states, had no measurable effect (p = 0.47) ([01 §8.10](notebooks/01_price_drivers.ipynb)).
 
-![Correlation of wind between regions](figures/q1_wind_correlation.png)
+![Correlation of wind between regions](figures/q1_wind_correlation.svg)
+
 *Figure 2. Correlation of hourly wind between countries.* Highest within the Baltic states: 0.86–0.88 ([01 §2](notebooks/01_price_drivers.ipynb)).
 
 ## 4. While Estlink 2 was out, the same wind was associated with a 68% larger price reduction; added turbines did not change the effect
 
 The effect of +10 percentage points of Baltic wind was −5.3 €/MWh in 2023, −7.1 in 2024, −11.1 in 2025 and −7.6 in January–August 2026 ([01 §6](notebooks/01_price_drivers.ipynb)); on January–August data it was −5.3, −3.3, −10.1 and −7.4 €/MWh ([01 §8.9](notebooks/01_price_drivers.ipynb)). The effect did not rise with each new turbine; it jumped in 2025 and fell back in 2026.
 
-The number of turbines grew steadily, so it cannot explain a jump. Lithuania added 522 MW of onshore wind in 2024 and 759 MW in 2025, doubling its fleet to about 2.5 GW (Ignitis Group, 2026; WWEA). A steady yearly trend in the wind effect is −0.6 €/MWh a year and not significant (p = 0.43; [01 §8.11](notebooks/01_price_drivers.ipynb)). The effect of each 100 MW of actual wind output was −1.6 €/MWh in 2023 and −2.0 €/MWh in 2026, statistically the same (p = 0.62), with a peak of −4.3 €/MWh in 2025 ([01 §8.12](notebooks/01_price_drivers.ipynb)).
+The number of turbines grew steadily, which does not fit a jump. Lithuania added 522 MW of onshore wind in 2024 and 759 MW in 2025, doubling its fleet to about 2.5 GW (Ignitis Group, 2026; WWEA). A steady yearly trend in the wind effect is −0.6 €/MWh a year and not significant (p = 0.43; [01 §8.11](notebooks/01_price_drivers.ipynb)). The effect of each 100 MW of actual wind output was −1.6 €/MWh in 2023 and −2.0 €/MWh in 2026, statistically the same (p = 0.62), with a peak of −4.3 €/MWh in 2025 ([01 §8.12](notebooks/01_price_drivers.ipynb)).
 
 The increase coincided with the Estlink 2 outage and is consistent with an outage-driven change in the wind–price relationship. On December 25, 2024, a ship's anchor damaged Estlink 2, the 650 MW cable between Estonia and Finland; it returned to service on June 20, 2025, 177 days later (Elering, 2025; Helsinki Times, 2025). Without it, wind surpluses in the Baltic states had 650 MW less export capacity to the north, a plausible mechanism for the stronger effect. In March 2025, +10 percentage points of Baltic wind were associated with a price reduction of 12.7 €/MWh, against 7.6 €/MWh without the outage, 68% more (p < 0.001; [01 §8.11](notebooks/01_price_drivers.ipynb)). In August 2025, after the cable returned, the effect was −7.8 €/MWh. When each calendar month gets its own wind effect, the extra effect during the outage is −8.1 €/MWh (95% CI −11.5 to −4.6), so a winter pattern does not account for it.
 
 The other changes of 2025 did not alter the wind effect measurably. After the Baltic balancing capacity market started on February 4, 2025 (AST, 2025) and the grid synchronized with Continental Europe on February 9, the wind effect changed by −1.3 €/MWh (p = 0.42). After the move to 15-minute day-ahead products on October 1, 2025 (NEMO Committee, 2025), it changed by −1.6 €/MWh (p = 0.39) ([01 §8.11](notebooks/01_price_drivers.ipynb)).
 
-![Wind effect by year](figures/q1_wind_effect_by_year.png)
+![Wind effect by year](figures/q1_wind_effect_by_year.svg)
+
 *Figure 3. Effect of +10 percentage points of Baltic wind, by year.* Largest in 2025, the year of the Estlink 2 outage ([01 §6](notebooks/01_price_drivers.ipynb)).
 
-![Effect of 100 MW of wind output by year](figures/q1_effect_per_100mw_by_year.png)
+![Effect of 100 MW of wind output by year](figures/q1_effect_per_100mw_by_year.svg)
+
 *Figure 4. Effect of 100 MW of wind output, by year.* −1.6 €/MWh in 2023, −2.0 €/MWh in 2026 ([01 §8.12](notebooks/01_price_drivers.ipynb)).
 
 ## 5. Gas prices and Nordic hydro did not change the wind effect
 
-+10 €/MWh of gas raised the power price by 5.3 €/MWh, 27% of the 20 €/MWh a gas plant setting the price every hour would pass through at 50% efficiency, consistent with gas plants setting the Lithuanian price only in some hours, and imports and renewables in the others ([01 §4](notebooks/01_price_drivers.ipynb)). Expensive gas did not make wind more valuable either: in 2026, +10 percentage points of wind lowered the price by 7.0 €/MWh at a gas price of 28 €/MWh and by 7.8 €/MWh at 52 €/MWh, a difference that is not statistically significant (p = 0.39; [01 §7](notebooks/01_price_drivers.ipynb)), and not in tight hours either (p = 0.65; [01 §8.13](notebooks/01_price_drivers.ipynb)). H4 is rejected.
++10 €/MWh of gas raised the power price by 5.3 €/MWh, 27% of the 20 €/MWh a gas plant setting the price every hour would pass through at 50% efficiency, consistent with gas plants setting the Lithuanian price only in some hours, and imports and renewables in the others ([01 §4](notebooks/01_price_drivers.ipynb)). Expensive gas did not make wind more valuable either: in 2026, +10 percentage points of wind lowered the price by 7.0 €/MWh at a gas price of 28 €/MWh and by 7.8 €/MWh at 52 €/MWh, a difference that is not statistically significant (p = 0.39; [01 §7](notebooks/01_price_drivers.ipynb)), and not in tight hours either (p = 0.65; [01 §8.13](notebooks/01_price_drivers.ipynb)). H4 is not supported.
 
-Nordic reservoirs 10 TWh above normal went with prices 5.0 €/MWh higher, the opposite of the expected effect, and with p = 0.049 when errors are clustered by month ([01 §8.8](notebooks/01_price_drivers.ipynb)). Reservoir levels partly reflect producers saving water before expensive periods, so they measure water management as well as weather, and Nordic water reaches Lithuania only through NordBalt and Estlink. H5 is rejected.
+Nordic reservoirs 10 TWh above normal went with prices 5.0 €/MWh higher, the opposite of the expected effect, and with p = 0.049 when errors are clustered by month ([01 §8.8](notebooks/01_price_drivers.ipynb)). Reservoir levels partly reflect producers saving water before expensive periods, so they measure water management as well as weather, and Nordic water reaches Lithuania only through NordBalt and Estlink. H5 is not supported.
 
-![Price against residual load](figures/q1_supply_curve.png)
+![Price against residual load](figures/q1_supply_curve.svg)
+
 *Figure 5. Price against residual load.* Steep in tight hours, flat at low residual load ([01 §3](notebooks/01_price_drivers.ipynb)).
 
 ## 6. Solar's capture rate fell from 0.87 to 0.54 in the same months of 2023 and 2026; wind's did not fall
@@ -109,10 +114,12 @@ Solar's value fell as the fleet grew, consistent with cannibalization: all panel
 
 Negative prices moved to the solar hours. In January–August there were 53 negative-price hours in 2023, 125 in 2024 and 165 in 2025, and in 2025 one in ten 14:00 hours had a negative price ([02 §1](notebooks/02_wind_value.ipynb)). In January–August 2026 negative hours fell to 63, yet solar's capture rate still slipped from 0.556 to 0.541, because night prices rose by about 30 €/MWh against 2025 and midday prices by about 10 €/MWh. The fall has slowed: −1.5 percentage points from 2025 to 2026, against −11.7 and −19.4 percentage points in the two years before.
 
-![Monthly capture rates](figures/q2_capture_rates_monthly.png)
+![Monthly capture rates](figures/q2_capture_rates_monthly.svg)
+
 *Figure 6. Monthly capture rates of wind and solar.* Solar below wind since 2024 ([02 §3.2](notebooks/02_wind_value.ipynb)).
 
-![Average price by hour, April–August](figures/q2_midday_dip.png)
+![Average price by hour, April–August](figures/q2_midday_dip.svg)
+
 *Figure 7. Average price by hour, April–August.* The 14:00 price fell from about 60 to 20 €/MWh in 2023–2025 ([02 §3.4](notebooks/02_wind_value.ipynb)).
 
 ## 7. Wind farms held back 18% of their output at negative prices, 0.8% of their 2025 production
@@ -123,7 +130,8 @@ Curtailment grew sixfold after 2023, as negative prices became more frequent and
 
 By stopping, the fleet avoided an estimated €81,700 in 2024 and €109,400 in 2025 in payments at negative prices; the estimate is small because prices in the curtailed hours averaged only −2.7 and −3.4 €/MWh ([02 §3.6](notebooks/02_wind_value.ipynb)). It raised the wind capture rate by 0.8 and 0.7 percentage points in those years ([02 §3.5](notebooks/02_wind_value.ipynb)).
 
-![Actual against expected wind output](figures/q2_curtailment.png)
+![Actual against expected wind output](figures/q2_curtailment.svg)
+
 *Figure 8. Actual against expected wind output.* 20–30% lower in negative-price hours above 500 MW ([02 §2.1](notebooks/02_wind_value.ipynb)).
 
 ## 8. A forecast from pre-auction information had a 41% lower error than repeating yesterday's prices
@@ -145,11 +153,13 @@ The forecast erred most at the ramps, in winter and on spike days. Its error was
 
 Its lead over repeating yesterday's prices fell from 45–50% in January–April to 26% in August, when the link to Poland was congested. In August, Poland's price averaged 134.4 €/MWh and Lithuania's 79.8 €/MWh, with only 162 MW (Poland to Lithuania) and 196 MW (Lithuania to Poland) offered on the link. With the link congested, Polish scarcity could not pass through to Lithuania, while Polish residual load is the forecast's most important input.
 
-![Forecast error by hour and month](figures/q3_error_by_hour_month.png)
+![Forecast error by hour and month](figures/q3_error_by_hour_month.svg)
+
 *Figure 9. Forecast error by hour and month.* Highest at 20 CET (33 €/MWh) and in February (31.4 €/MWh) ([03 §5.2](notebooks/03_forecast.ipynb)).
 
-![Forecast in the most volatile week](figures/q3_example_week.png)
-*Figure 10. Forecast and actual prices, February 2–8, 2026.* A peak of about 615 €/MWh against a forecast of 330–380 ([03 §5.2](notebooks/03_forecast.ipynb)).
+![Forecast in the most volatile week](figures/q3_example_week.svg)
+
+*Figure 10. Forecast and actual prices, February 2–8, 2026.* A peak of about 615 €/MWh against a forecast of 330–380 €/MWh ([03 §5.2](notebooks/03_forecast.ipynb)).
 
 ## 9. Tuned on autumn 2025, an improved model cut the error by a further 4% in September 2026
 
@@ -173,7 +183,8 @@ v2 forecast whether tomorrow's average price would be above or below today's cor
 
 The 80% prediction intervals contained the actual price in 74% of hours in January–August and 68% in September, 6 and 12 percentage points short of 80% ([03 §9](notebooks/03_forecast.ipynb)). Each interval is estimated from the previous 56 days, so when volatility jumps – repeating yesterday's prices erred by 79.6 €/MWh in September against 41.8 €/MWh in January–August – the intervals are too narrow.
 
-![Forecast with its 80% interval in the volatile week](figures/q3_v2_interval_week.png)
+![Forecast with its 80% interval in the volatile week](figures/q3_v2_interval_week.svg)
+
 *Figure 11. v2 forecast with its 80% prediction interval, February 2–8, 2026.* The interval did not reach the peak ([03 §9](notebooks/03_forecast.ipynb)).
 
 ## 11. A battery scheduled with the forecast earned 89% of the perfect-foresight profit
@@ -191,12 +202,13 @@ A battery earns from the order of the hours within a day, not from the price lev
 
 For Ignitis' 291 MW / 582 MWh of batteries at Kelmė, Mažeikiai and Kruonis, due in 2027 (Ignitis Group, 2025; ESS News, 2025), forecast-based scheduling is worth up to €2.8 million a year over repeating yesterday's prices, and v2 over the main model about €65,000 (January–August basis). Both are upper bounds. Repeating yesterday's prices is a benchmark no trading desk uses; 291 MW is about 21% of Lithuania's average load of 1.4 GW, so the batteries will move the prices they trade at, which cut a 1 GW device's arbitrage value by about 10% in PJM (Sioshansi et al., 2009); and the test ignores grid fees, degradation, quarter-hour prices and balancing revenues. September's figures annualize 26 volatile days and are not used for these estimates.
 
-![Cumulative battery profit](figures/q3_battery_value.png)
+![Cumulative battery profit](figures/q3_battery_value.svg)
+
 *Figure 12. Cumulative battery profit by schedule.* €55,200 per MW with v2 against €62,200 with perfect foresight ([03 §11](notebooks/03_forecast.ipynb)).
 
 ## 12. Knowing the wind that actually blew made the forecast 2.5% worse
 
-Replacing Lithuania's day-ahead wind forecast with the wind output that actually occurred raised the forecast error from 27.1 to 27.8 €/MWh (+2.5%, p = 0.064), and replacing the wind, solar and load forecasts together gave 27.8 €/MWh ([03 §6](notebooks/03_forecast.ipynb)). All variants in this comparison are re-trained monthly, which puts their errors about 2.5 €/MWh above the main model's 24.6 €/MWh. H9 is rejected.
+Replacing Lithuania's day-ahead wind forecast with the wind output that actually occurred raised the forecast error from 27.1 to 27.8 €/MWh (+2.5%, p = 0.064), and replacing the wind, solar and load forecasts together gave 27.8 €/MWh ([03 §6](notebooks/03_forecast.ipynb)). All variants in this comparison are re-trained monthly, which puts their errors about 2.5 €/MWh above the main model's 24.6 €/MWh. H9 is not supported.
 
 | Information used (re-trained monthly) | Mean absolute error, €/MWh | Change against ENTSO-E forecasts |
 |---|---|---|
@@ -210,16 +222,18 @@ The day-ahead price is set at 12:00 CET on the day before delivery, from bids ba
 
 The forecasts themselves are valuable: without them the error was 3.2 €/MWh (11.7%) higher. ERA5 reanalysis wind did worse than the grid operators' forecasts (+1.3 €/MWh) because it describes the weather on a grid of about 31 km, not the output of the actual wind farms (Staffell & Pfenninger, 2016; Olauson, 2018).
 
-![What each kind of information is worth](figures/q3_h9_information_value.png)
+![What each kind of information is worth](figures/q3_h9_information_value.svg)
+
 *Figure 13. Forecast error by information set.* The actual wind raised the error from 27.1 to 27.8 €/MWh ([03 §6](notebooks/03_forecast.ipynb)).
 
-## 13. Rooftop solar made the load forecast's error 2.3 times larger; a 56-day correction cuts it by 30%
+## 13. The load forecast's error grew 2.3 times, mostly in solar hours; a 56-day correction cuts it by 30%
 
 Over all hours of each year, the published day-ahead load forecast for Lithuania missed actual load by 59 MW in 2023 and 138 MW in 2026, 2.3 times as much ([03 §8](notebooks/03_forecast.ipynb)). By hour of day, the 2026 error peaked at about 250 MW around 11:00, where it was about 60 MW in 2023, while the night-time error did not change ([03 §1](notebooks/03_forecast.ipynb)). About 170,000 prosumers produced about 70% of Lithuania's solar output in 2025 (pv magazine, 2026); their output lowers the load the grid operator measures at midday, which the forecast does not appear to anticipate.
 
 Subtracting the error that the solar forecast predicted over the previous 56 days cut the 2026 error from 138 to 97 MW (−30%) and the 2025 error from 84 to 75 MW (−11%) ([03 §8](notebooks/03_forecast.ipynb)). In 2024, with less rooftop solar, the correction raised the error from 73 to 77 MW.
 
-![Load forecast error by hour](figures/q3_load_forecast_error.png)
+![Load forecast error by hour](figures/q3_load_forecast_error.svg)
+
 *Figure 14. Load forecast error by hour, 2023 and 2026.* About 250 MW around 11:00 in 2026 ([03 §1](notebooks/03_forecast.ipynb)).
 
 ---
@@ -274,22 +288,22 @@ The raw data are processed with DuckDB and SQL into one hourly table: `lt_hourly
 
 - Information set. What is known at 12:00 CET on the day before delivery: prices of the three previous days and of a week earlier, neighbors' prices of the day before, day-ahead load, wind and solar forecasts for Lithuania and five neighboring regions, gas and carbon closes two days before, Nordic hydro published at least 11 days before, holidays and the Estlink 2 outage. Days follow the auction's CET clock, and automatic checks confirm that no input uses later information – apart from the possible late publication of wind and solar forecasts ([section 14](#14-limits)).
 - Models. Repeating yesterday's prices (last week's on Mondays and weekends); Lasso (Tibshirani, 1996) with one model per delivery hour (Uniejewski et al., 2016; Lago et al., 2021); LightGBM (Ke et al., 2017); and their average, fixed in advance as the main model. Prices are transformed with a scaled inverse hyperbolic sine before training (Uniejewski et al., 2018).
-- Evaluation. Training to September 2025; settings chosen on October–December 2025; forecasts day by day for January–August 2026 and September 1–26, 2026, re-training Lasso daily and LightGBM weekly (daily in v2). Diebold–Mariano (1995) and Giacomini–White (2006) tests compare models on daily errors.
+- Evaluation. Training to September 2025; settings chosen on October–December 2025; forecasts day by day for January–August 2026 and September 1–26, 2026, re-training Lasso daily and LightGBM weekly (daily in v2). Diebold–Mariano (Diebold & Mariano, 1995) and Giacomini–White (Giacomini & White, 2006) tests compare models on daily errors.
 - Uncertainty and value. 80% intervals by quantile regression averaging (Koenker & Bassett, 1978; Nowotarski & Weron, 2015), scored by coverage and pinball loss; a battery schedule optimized each day by linear programming on the forecast prices and settled at the actual prices.
 
 ## Appendix B. Hypotheses and verdicts
 
 | | Hypothesis | Verdict | Evidence | Section |
 |---|---|---|---|---|
-| H1 | Stronger wind in the Baltic states lowers the Lithuanian day-ahead price, holding demand, solar, gas, Nordic hydro and calendar effects fixed. | Supported | −7.6 €/MWh per +10 pp (95% CI −8.5 to −6.7) | [2](#2-a-typical-windy-hour-was-17-mwh-19-cheaper-than-a-typical-calm-one) |
+| H1 | Stronger wind in the Baltic states lowers the Lithuanian day-ahead price, holding demand, solar, gas, Nordic hydro and calendar effects fixed. | Supported | −7.6 €/MWh per +10 percentage points (95% CI −8.5 to −6.7) | [2](#2-a-typical-windy-hour-was-17-mwh-19-cheaper-than-a-typical-calm-one) |
 | H2 | The effect of Baltic wind on the price has grown from 2023 to 2026 as installed wind capacity increased. | Partly supported | −5.3 €/MWh in 2023 → −7.6 in 2026 (p = 0.04), but −11.1 in 2025, when Estlink 2 was out | [4](#4-while-estlink-2-was-out-the-same-wind-was-associated-with-a-68-larger-price-reduction-added-turbines-did-not-change-the-effect) |
 | H3 | Nordic and Continental wind also lower the Lithuanian price; without them the Baltic wind effect is overstated. | Supported | without them, the Baltic effect reads −11.4 instead of −7.6 €/MWh | [3](#3-neighbors-wind-moves-the-lithuanian-price-98-as-much-as-baltic-wind) |
-| H4 | Wind lowers the price more when natural gas is expensive, because it displaces gas-fired plants. | Rejected | −7.0 €/MWh at 28 €/MWh gas, −7.8 at 52 (p = 0.39) | [5](#5-gas-prices-and-nordic-hydro-did-not-change-the-wind-effect) |
-| H5 | More water than normal in Nordic hydro reservoirs lowers the Lithuanian price. | Rejected | +5.0 €/MWh per +10 TWh, p = 0.049 when clustered by month | [5](#5-gas-prices-and-nordic-hydro-did-not-change-the-wind-effect) |
+| H4 | Wind lowers the price more when natural gas is expensive, because it displaces gas-fired plants. | Not supported | −7.0 €/MWh at 28 €/MWh gas, −7.8 at 52 (p = 0.39) | [5](#5-gas-prices-and-nordic-hydro-did-not-change-the-wind-effect) |
+| H5 | More water than normal in Nordic hydro reservoirs lowers the Lithuanian price. | Not supported | +5.0 €/MWh per +10 TWh, p = 0.049 when clustered by month | [5](#5-gas-prices-and-nordic-hydro-did-not-change-the-wind-effect) |
 | H6 | In hours with a negative price, wind farms produce less than the wind would allow, because some farms stop to avoid losses. | Supported | 18% lower output (95% CI 10–26%), 0.9% in the 0–10 €/MWh placebo band | [7](#7-wind-farms-held-back-18-of-their-output-at-negative-prices-08-of-their-2025-production) |
 | H7 | The capture rates of wind and solar are below 1 and fell over 2023–2026; solar's is lower and falls faster. | Partly supported | solar −8.4 percentage points a year; wind +0.25 (p = 0.74) | [6](#6-solars-capture-rate-fell-from-087-to-054-in-the-same-months-of-2023-and-2026-winds-did-not-fall) |
 | H8 | A model that uses only information available before the auction forecasts tomorrow's hourly prices more accurately than a naive benchmark (Diebold–Mariano p < 0.05). | Supported | 24.6 against 41.8 €/MWh (p < 0.001) | [8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices) |
-| H9 | Replacing Lithuania's wind forecast with the wind output that actually occurred makes the price forecast more accurate. | Rejected | 27.8 against 27.1 €/MWh (p = 0.064) | [12](#12-knowing-the-wind-that-actually-blew-made-the-forecast-25-worse) |
+| H9 | Replacing Lithuania's wind forecast with the wind output that actually occurred makes the price forecast more accurate. | Not supported | 27.8 against 27.1 €/MWh (p = 0.064) | [12](#12-knowing-the-wind-that-actually-blew-made-the-forecast-25-worse) |
 
 H9 was re-specified during the analysis: the first design used ERA5 wind as the "perfect" information, which measured wind output less accurately than the grid operators' forecasts (28.4 against 27.1 €/MWh).
 
