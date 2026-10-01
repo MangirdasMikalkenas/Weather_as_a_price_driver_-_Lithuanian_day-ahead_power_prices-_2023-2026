@@ -1,0 +1,13 @@
+finding,estimate
+"Intervals (QRA), January–August 2026: price below the 10% quantile","12.5% of hours against 10% (p = 0.011); Kupiec rejects in 6 of 24 hours, Christoffersen in 3"
+"Intervals (QRA), January–August 2026: price above the 90% quantile","13.8% of hours against 10% (p = <0.001); Kupiec rejects in 10 of 24 hours, Christoffersen in 3"
+"Intervals (QRA), January–August 2026: price outside the 80% interval","26.2% of hours against 20% (p = <0.001); Kupiec rejects in 16 of 24 hours, Christoffersen in 2"
+"Intervals (QRA), September 2026: price below the 10% quantile","11.6% of hours against 10% (p = 0.558); Kupiec rejects in 1 of 24 hours, Christoffersen in 0"
+"Intervals (QRA), September 2026: price above the 90% quantile","20.9% of hours against 10% (p = 0.009); Kupiec rejects in 7 of 24 hours, Christoffersen in 0"
+"Intervals (QRA), September 2026: price outside the 80% interval","32.4% of hours against 20% (p = <0.001); Kupiec rejects in 8 of 24 hours, Christoffersen in 1"
+"Solar PPA, HS 250 days, VaR 99%","38 exceptions in 974 days (3.9% against 1%); Kupiec p = <0.001, Christoffersen p = <0.001; zones 2024: yellow, 2025: red, 2026: red"
+"Solar PPA, HS 250 days, VaR 95%","106 exceptions in 974 days (10.9% against 5%); Kupiec p = <0.001, Christoffersen p = <0.001; zones 2024: red, 2025: red, 2026: red"
+"Solar PPA, HS 60 days, VaR 99%","53 exceptions in 974 days (5.4% against 1%); Kupiec p = <0.001, Christoffersen p = <0.001; zones 2024: red, 2025: red, 2026: red"
+"Solar PPA, HS 60 days, VaR 95%","108 exceptions in 974 days (11.1% against 5%); Kupiec p = <0.001, Christoffersen p = <0.001; zones 2024: red, 2025: yellow, 2026: red"
+"Solar PPA, Filtered HS (EWMA), VaR 99%","21 exceptions in 974 days (2.2% against 1%); Kupiec p = 0.002, Christoffersen p = <0.001; zones 2024: yellow, 2025: green, 2026: yellow"
+"Solar PPA, Filtered HS (EWMA), VaR 95%","72 exceptions in 974 days (7.4% against 5%); Kupiec p = 0.001, Christoffersen p = <0.001; zones 2024: yellow, 2025: green, 2026: yellow"
