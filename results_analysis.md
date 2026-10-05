@@ -1,10 +1,10 @@
 # Weather as a price driver: Lithuanian day-ahead power prices, 2023–2026
 
-Wind across the Baltic Sea region moves the Lithuanian day-ahead price more than any other weather variable, and the size of that effect depends strongly on interconnector availability. The results have five implications for Ignitis. Wind and residual load in Poland, Sweden and Finland, together with the state of the interconnectors, are as relevant to the price as Baltic wind: while the Estlink 2 cable was out (December 25, 2024 – June 20, 2025), the same amount of wind was associated with a 68% larger price reduction. Solar output is better valued at today's capture rate than at the historical one: a solar MWh earned 54% of the average price in January–August 2026, against 87% in the same months of 2023, while wind's share showed no downward trend. For battery scheduling, a forecast of the day's price shape appears sufficient: scheduled with our forecast, a battery earned 89% of the perfect-foresight profit, against 78% when repeating yesterday's prices – up to €2.8 million a year for Ignitis' 291 MW – while a 7% improvement in forecast accuracy added about €65,000. Better wind forecasts would not improve the day-ahead price forecast; their value is more likely to lie in intraday trading and balancing. Finally, correcting the grid operator's load forecast for rooftop solar would reduce its 2026 error by 30%.
+Wind across the Baltic Sea region moves the Lithuanian day-ahead price more than any other weather variable, and the size of that effect depends strongly on interconnector availability. The results have six implications for Ignitis. Wind and residual load in Poland, Sweden and Finland, together with the state of the interconnectors, are as relevant to the price as Baltic wind, and an interconnector outage can change the wind–price relationship: while the Estlink 2 cable was out (December 25, 2024 – June 20, 2025), +10 percentage points of wind were associated with an extra price reduction of 5.1–8.1 €/MWh, depending on the specification, in a single 177-day event. Solar output is better valued at today's capture rate than at the historical one: a solar MWh earned 54% of the average price in January–August 2026, against 87% in the same months of 2023, while wind's share showed no downward trend. For battery scheduling, a forecast of the day's price shape appears sufficient: scheduled with our forecast, a battery earned 89% of the perfect-foresight profit, against 78% when repeating yesterday's prices, while a 7% improvement in forecast accuracy added about €220 per MW and year. Even knowing the wind that actually blew did not improve the day-ahead price forecast, so the value of better wind forecasts is more likely to lie in intraday trading and balancing; a better forecast made before the auction was not tested. Correcting the grid operator's load forecast for rooftop solar would reduce its 2026 error by 30%. Finally, risk limits on solar PPAs would be better based on a volatility-scaled measure or a full year of history than on 250 days, which failed in summer in a backtest.
 
-These implications rest on five findings for January 2023 – September 2026. A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and wind in the neighboring regions moved the price 98% as much as Baltic wind (−7.4 €/MWh per +10 percentage points). The increase in the wind effect in 2025 coincided with the Estlink 2 outage and is not explained by the turbines added. Solar's capture rate (output-weighted price ÷ average price) fell by 8.4 percentage points a year, and wind farms held back 18% of their output in negative-price hours, which represented 0.8% of their 2025 production. A forecast built on information available before the auction had a 41% lower error than repeating yesterday's prices (mean absolute error 24.6 against 41.8 €/MWh), and replacing its wind forecast with the wind that actually blew made it 2.5% worse.
+These implications rest on six findings for January 2023 – September 2026. A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and Nordic wind moved the price about as much as Baltic wind (−7.4 against −7.6 €/MWh per +10 percentage points, with 95% confidence intervals that overlap almost entirely). The increase in the wind effect in 2025 coincided with the Estlink 2 outage and is not explained by the turbines added. Solar's capture rate (output-weighted price ÷ average price) fell by 8.4 percentage points a year, and wind farms held back 18% of their output in negative-price hours, which represented 0.8% of their 2025 production. A forecast built on information available before the auction had a 41% lower error than repeating yesterday's prices (mean absolute error 24.6 against 41.8 €/MWh), and replacing its wind forecast with the wind that actually blew made it 2.5% worse. Backtests of the kind banks apply to Value-at-Risk show that the forecast's 80% intervals under-predict price spikes and that a cash-flow-at-risk for a solar PPA based on 250 days of history fails in summer.
 
-The analysis joins 32,135 hourly prices with public weather, grid and fuel data in three notebooks – price drivers ([01](notebooks/01_price_drivers.ipynb)), the value of wind and solar ([02](notebooks/02_wind_value.ipynb)) and forecasting ([03](notebooks/03_forecast.ipynb)) – with methods in [Appendix A](#appendix-a-data-and-methods). The wind effect passes five independent checks; the forecast beat repeating yesterday's prices in every month from January to September 2026; and the improved forecast's 4% gain on the 26 days of September 2026 that no decision used is statistically uncertain (p = 0.04–0.19). The main caveats are listed in [section 14](#14-limits).
+The analysis joins 32,135 hourly prices with public weather, grid and fuel data in four notebooks – price drivers ([01](notebooks/01_price_drivers.ipynb)), the value of wind and solar ([02](notebooks/02_wind_value.ipynb)), forecasting ([03](notebooks/03_forecast.ipynb)) and backtesting the uncertainty ([04](notebooks/04_risk_backtesting.ipynb)) – with methods in [Appendix A](#appendix-a-data-and-methods). The wind effect holds in five additional checks on the same data; the forecast beat repeating yesterday's prices in every month from January to September 2026; and the improved forecast's 4% gain on the 26 days of September 2026 that no decision used is statistically uncertain (p = 0.04–0.19). No adjustment was made for testing eleven hypotheses and many robustness variants, so results with p-values between 0.04 and 0.07 are tentative. The main caveats are listed in [section 15](#15-limits).
 
 ---
 
@@ -12,13 +12,13 @@ The analysis joins 32,135 hourly prices with public weather, grid and fuel data 
 
 ### 1.1 Trading
 
-Polish, Swedish and Finnish wind and residual load are as relevant to the Lithuanian price as Baltic wind. Per +10 percentage points of capacity factor, Nordic wind lowered the Lithuanian price by 7.4 €/MWh and Baltic wind by 7.6 €/MWh ([section 3](#3-neighbors-wind-moves-the-lithuanian-price-98-as-much-as-baltic-wind)), and Poland's forecast residual load (load − wind − solar) was the most informative input of the forecast model, with 30% of its gain ([section 8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices)).
+Polish, Swedish and Finnish wind and residual load are as relevant to the Lithuanian price as Baltic wind. Per +10 percentage points of capacity factor, Nordic wind lowered the Lithuanian price by 7.4 €/MWh and Baltic wind by 7.6 €/MWh ([section 3](#3-nordic-wind-moves-the-lithuanian-price-about-as-much-as-baltic-wind)), and Poland's forecast residual load (load − wind − solar) was the most informative input of the forecast model, with 30% of its gain ([section 8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices)).
 
-An interconnector outage can change the relationship between wind and price. While Estlink 2 was out, +10 percentage points of Baltic wind were associated with a price reduction of 12.7 €/MWh instead of 7.6 €/MWh ([section 4](#4-while-estlink-2-was-out-the-same-wind-was-associated-with-a-68-larger-price-reduction-added-turbines-did-not-change-the-effect)). In August 2026, with only 162 MW (Poland to Lithuania) and 196 MW (Lithuania to Poland) offered on the link, Poland's price averaged 54.6 €/MWh above Lithuania's ([section 8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices)).
+An interconnector outage can change the relationship between wind and price. While Estlink 2 was out, +10 percentage points of Baltic wind were associated with a price reduction of 12.7 €/MWh instead of 7.6 €/MWh, in a single 177-day event ([section 4](#4-while-estlink-2-was-out-the-same-wind-was-associated-with-a-larger-price-reduction-added-turbines-did-not-change-the-effect)). In August 2026, with only 162 MW (Poland to Lithuania) and 196 MW (Lithuania to Poland) offered on the link, Poland's price averaged 54.6 €/MWh above Lithuania's ([section 8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices)).
 
 Wind moves the price more when the system is tight. In the 30% of hours with the highest load forecast, +10 percentage points of wind lowered the price by 10.2 €/MWh, against 6.2 €/MWh in the other hours ([section 2](#2-a-typical-windy-hour-was-17-mwh-19-cheaper-than-a-typical-calm-one)).
 
-The value of a better weather forecast is more likely to arise after the auction than in the day-ahead price forecast. Replacing the wind forecast with the wind that actually blew made the day-ahead price forecast 2.5% worse, and forecast errors explained 0.1% of the price forecast error ([section 12](#12-knowing-the-wind-that-actually-blew-made-the-forecast-25-worse)). Surprises in wind and demand are priced in the intraday and balancing markets.
+The value of a better weather forecast is more likely to arise after the auction than in the day-ahead price forecast. Replacing the wind forecast with the wind that actually blew – perfect hindsight, not a better forecast made before the auction – made the day-ahead price forecast 2.5% worse (p = 0.064), and forecast errors explained 0.1% of the price forecast error ([section 12](#12-knowing-the-wind-that-actually-blew-made-the-forecast-25-worse)). Surprises in wind and demand are priced in the intraday and balancing markets.
 
 ### 1.2 Wind and solar assets
 
@@ -32,13 +32,19 @@ A hybrid park does not raise the value of each MWh. Two-thirds wind and one-thir
 
 ### 1.3 Storage
 
-For storage scheduling, a forecast of the day's price shape captured 89% of the attainable profit, and a further 7% improvement in forecast accuracy added about €65,000 a year across 291 MW. A 1 MW / 2 MWh battery scheduled with our forecast earned €75,200 per MW and year, against €84,300 with perfect foresight; when repeating yesterday's prices, it earned 78% of the perfect-foresight profit. Across 291 MW the forecast is worth up to €2.8 million a year – an upper bound, measured against a benchmark that no trading desk uses ([section 11](#11-a-battery-scheduled-with-the-forecast-earned-89-of-the-perfect-foresight-profit)).
+For storage scheduling, a forecast of the day's price shape captured 89% of the attainable profit. A 1 MW / 2 MWh battery scheduled with our forecast earned €75,200 per MW and year, against €84,300 with perfect foresight and €65,400 when repeating yesterday's prices; a further 7% improvement in forecast accuracy added about €220 per MW and year ([section 11](#11-a-battery-scheduled-with-the-forecast-earned-89-of-the-perfect-foresight-profit)).
 
 Storage revenue plans may need to allow for narrower spreads. In April–August the average price at 21:00 exceeded that at 14:00 by 115–135 €/MWh in 2024–2026, against about 75 €/MWh in 2023 ([section 6](#6-solars-capture-rate-fell-from-087-to-054-in-the-same-months-of-2023-and-2026-winds-did-not-fall)); the spread may narrow as additional storage capacity is deployed.
 
 ### 1.4 Load forecasting and supply
 
 Correcting the grid operator's load forecast for rooftop solar would reduce its 2026 error by 30%. Subtracting the error that the solar forecast predicted over the previous 56 days cut the 2026 load forecast error from 138 to 97 MW ([section 13](#13-the-load-forecasts-error-grew-23-times-mostly-in-solar-hours-a-56-day-correction-cuts-it-by-30)).
+
+### 1.5 Risk management
+
+Risk limits for solar PPA positions would be better based on a volatility-scaled cash-flow-at-risk, or at least on a full year of history, than on the 250 days of a standard historical simulation. The 250-day model overstated winter risk 12-fold and failed in summer, with 40 exceptions at 99% in 974 days and a red Basel zone in 2025 and 2026; 360 days of history cut the exceptions to 14 and volatility scaling to 24. None of the three models passed the test of Expected Shortfall, so the size of losses beyond the limit is understated as well ([section 14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
+
+The forecast's prediction intervals understate the risk of price spikes. The price rose above the upper bound of the 80% interval in 13.8% of hours in January–August 2026 and 20.9% in September, against a target of 10% ([section 14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
 ---
 
@@ -50,15 +56,15 @@ Higher wind generation lowers the price because wind has near-zero marginal cost
 
 Wind in the three regions together moved the price more than any other weather variable. Scaled by one typical swing (one standard deviation, within the same hour, month and year), Baltic, Nordic and Continental wind moved the price by 12.3, 7.7 and 6.9 €/MWh, 26.9 €/MWh together; solar radiation by 12.4 €/MWh, the same as Baltic wind alone; the load forecast by 15.8, gas by 3.9 and Nordic hydro by 2.9 €/MWh ([01 §4.1](notebooks/01_price_drivers.ipynb)).
 
-Five independent checks support reading the 7.6 €/MWh as the effect of wind itself – a placebo with next week's wind, the ten wind deciles, an instrumental-variable estimate, an out-of-sample test and a leave-one-year-out test, detailed in [Appendix A.2](#a2-notebook-01-price-drivers). The 7.6 €/MWh is more likely to understate than overstate the effect, because ERA5 records the weather that occurred while the market clears on the forecasts made a day earlier.
+Five additional checks support reading the 7.6 €/MWh as the effect of wind itself – a placebo with next week's wind, the ten wind deciles, an instrumental-variable estimate, an out-of-sample test and a leave-one-year-out test, detailed in [Appendix A.2](#a2-notebook-01-price-drivers). They all use the same data, and the placebo is borderline: next week's wind has a small coefficient (+0.74 €/MWh), but its p-value of 0.064 is close to 5%. The 7.6 €/MWh is more likely to understate than overstate the effect, because ERA5 records the weather that occurred while the market clears on the forecasts made a day earlier.
 
 ![Price by wind decile](figures/q1_dose_response.svg)
 
 *Figure 1. Price by Baltic wind decile.* The windiest tenth of hours was about 50 €/MWh cheaper than the calmest ([01 §8.3](notebooks/01_price_drivers.ipynb)).
 
-## 3. Neighbors' wind moves the Lithuanian price 98% as much as Baltic wind
+## 3. Nordic wind moves the Lithuanian price about as much as Baltic wind
 
-Per +10 percentage points, Nordic wind lowered the Lithuanian price by 7.4 €/MWh and Continental wind by 5.3 €/MWh, against 7.6 €/MWh for Baltic wind; +10 percentage points in all three regions at once lowered it by 20.4 €/MWh (95% CI 18.6–22.2), 22% of the average price ([01 §5](notebooks/01_price_drivers.ipynb)). Lithuania trades power with Sweden through NordBalt (700 MW), with Finland through Estonia and the Estlink cables (350 and 650 MW), and with Poland. A windy day in any of these regions lowers the price at which Lithuania can import and raises the competition for its exports.
+Per +10 percentage points, Nordic wind lowered the Lithuanian price by 7.4 €/MWh (95% CI 5.9–9.0) and Continental wind by 5.3 €/MWh, against 7.6 €/MWh (6.7–8.5) for Baltic wind, so the Nordic and Baltic effects cannot be told apart; +10 percentage points in all three regions at once lowered it by 20.4 €/MWh (95% CI 18.6–22.2), 22% of the average price ([01 §5](notebooks/01_price_drivers.ipynb)). Lithuania trades power with Sweden through NordBalt (700 MW), with Finland through Estonia and the Estlink cables (350 and 650 MW), and with Poland. A windy day in any of these regions lowers the price at which Lithuania can import and raises the competition for its exports.
 
 Leaving the neighbors out makes Baltic wind look 50% stronger than it is: −11.4 instead of −7.6 €/MWh ([01 §5](notebooks/01_price_drivers.ipynb)). Weather systems are regional – Lithuanian wind correlates 0.66 with Polish wind and Estonian wind 0.59 with Finnish – so a model with Baltic wind alone credits it with part of the neighbors' effect.
 
@@ -68,13 +74,13 @@ The Nordic effect ran through the two countries connected to the Baltic states. 
 
 *Figure 2. Correlation of hourly wind between countries.* Highest within the Baltic states: 0.86–0.88 ([01 §2](notebooks/01_price_drivers.ipynb)).
 
-## 4. While Estlink 2 was out, the same wind was associated with a 68% larger price reduction; added turbines did not change the effect
+## 4. While Estlink 2 was out, the same wind was associated with a larger price reduction; added turbines did not change the effect
 
 The effect of +10 percentage points of Baltic wind was −5.3 €/MWh in 2023, −7.1 in 2024, −11.1 in 2025 and −7.6 in January–August 2026 ([01 §6](notebooks/01_price_drivers.ipynb)); on January–August data it was −5.3, −3.3, −10.1 and −7.4 €/MWh ([01 §8.9](notebooks/01_price_drivers.ipynb)). The effect did not rise with each new turbine; it jumped in 2025 and fell back in 2026.
 
 The number of turbines grew steadily, which does not fit a jump. Lithuania added 522 MW of onshore wind in 2024 and 759 MW in 2025, doubling its fleet to about 2.5 GW (Ignitis Group, 2026; WWEA). A steady yearly trend in the wind effect is −0.6 €/MWh a year and not significant (p = 0.43; [01 §8.11](notebooks/01_price_drivers.ipynb)). The effect of each 100 MW of actual wind output was −1.6 €/MWh in 2023 and −2.0 €/MWh in 2026, statistically the same (p = 0.62), with a peak of −4.3 €/MWh in 2025 ([01 §8.12](notebooks/01_price_drivers.ipynb)).
 
-The increase coincided with the Estlink 2 outage and is consistent with an outage-driven change in the wind–price relationship. On December 25, 2024, a ship's anchor damaged Estlink 2, the 650 MW cable between Estonia and Finland; it returned to service on June 20, 2025, 177 days later (Elering, 2025; Helsinki Times, 2025). Without it, wind surpluses in the Baltic states had 650 MW less export capacity to the north, a plausible mechanism for the stronger effect. In March 2025, +10 percentage points of Baltic wind were associated with a price reduction of 12.7 €/MWh, against 7.6 €/MWh without the outage, 68% more (p < 0.001; [01 §8.11](notebooks/01_price_drivers.ipynb)). In August 2025, after the cable returned, the effect was −7.8 €/MWh. When each calendar month gets its own wind effect, the extra effect during the outage is −8.1 €/MWh (95% CI −11.5 to −4.6), so a winter pattern does not account for it.
+The increase coincided with the Estlink 2 outage and is consistent with an outage-driven change in the wind–price relationship. On December 25, 2024, a ship's anchor damaged Estlink 2, the 650 MW cable between Estonia and Finland; it returned to service on June 20, 2025, 177 days later (Elering, 2025; Helsinki Times, 2025). Without it, wind surpluses in the Baltic states had 650 MW less export capacity to the north, a plausible mechanism for the stronger effect. In March 2025, +10 percentage points of Baltic wind were associated with a price reduction of 12.7 €/MWh, against 7.6 €/MWh without the outage, 68% more (p < 0.001; [01 §8.11](notebooks/01_price_drivers.ipynb)). In August 2025, after the cable returned, the effect was −7.8 €/MWh. When each calendar month gets its own wind effect, the extra effect during the outage is −8.1 €/MWh (95% CI −11.5 to −4.6), so a winter pattern does not account for it. The estimate rests on a single 177-day event, and its size depends on the specification: an extra 5.1 €/MWh in the main model and 8.1 €/MWh with month-specific effects.
 
 The other changes of 2025 did not alter the wind effect measurably. After the Baltic balancing capacity market started on February 4, 2025 (AST, 2025) and the grid synchronized with Continental Europe on February 9, the wind effect changed by −1.3 €/MWh (p = 0.42). After the move to 15-minute day-ahead products on October 1, 2025 (NEMO Committee, 2025), it changed by −1.6 €/MWh (p = 0.39) ([01 §8.11](notebooks/01_price_drivers.ipynb)).
 
@@ -195,7 +201,7 @@ A 1 MW / 2 MWh battery that charged in the hours v2 predicted to be cheapest and
 |---|---|---|---|---|
 | Actual prices (perfect foresight) | 100% | 100% | 84,300 | 84,800 |
 | v2 forecast | 89.2% | 85.9% | 75,200 | 72,800 |
-| Main (pre-registered) forecast | 88.9% | 85.4% | 74,900 | 72,400 |
+| Main forecast (fixed in advance) | 88.9% | 85.4% | 74,900 | 72,400 |
 | Repeating yesterday's prices | 77.6% | 60.3% | 65,400 | 51,100 |
 
 A battery earns from the order of the hours within a day, not from the price level, so v2's 6.9% lower error added only €222 per MW and year in January–August. v2 found the most expensive hour within one hour on 74% of days and the cheapest on 51%, yet all its timing errors together cost €6,100 per MW over January–August, 10.8% of the perfect-foresight profit, because a missed hour was usually replaced by one with a similar price. A simple dispatch rule in the PJM market captured a similar share of perfect-foresight value, about 85% (Sioshansi et al., 2009).
@@ -218,7 +224,7 @@ Replacing Lithuania's day-ahead wind forecast with the wind output that actually
 | Actual Lithuanian wind | 27.8 | +2.5% (p = 0.064) |
 | Actual Lithuanian wind, solar and load | 27.8 | +2.6% (p = 0.054) |
 
-The day-ahead price is set at 12:00 CET on the day before delivery, from bids based on the forecasts traders had then; the result is consistent with the auction pricing these expectations rather than the later outcome. Differences between forecast and outcome are traded afterwards in the intraday market and settled in balancing, where they do move prices (Kiesel & Paraschiv, 2017; Kulakov & Ziel, 2021). The errors of the Lithuanian wind, solar and load forecasts explain 0.1% of the variance of the price forecast's hourly error ([03 §6.1](notebooks/03_forecast.ipynb)), and the 95% interval allows perfect wind knowledge to lower the error by at most 0.04 €/MWh.
+The day-ahead price is set at 12:00 CET on the day before delivery, from bids based on the forecasts traders had then; the result is consistent with the auction pricing these expectations rather than the later outcome. The test replaces the forecast with perfect hindsight; it does not show that a better forecast made before the auction would be worthless, for example one closer to what other traders expect. Differences between forecast and outcome are traded afterwards in the intraday market and settled in balancing, where they do move prices (Kiesel & Paraschiv, 2017; Kulakov & Ziel, 2021). The errors of the Lithuanian wind, solar and load forecasts explain 0.1% of the variance of the price forecast's hourly error ([03 §6.1](notebooks/03_forecast.ipynb)), and the 95% interval allows perfect wind knowledge to lower the error by at most 0.04 €/MWh.
 
 The forecasts themselves are valuable: without them the error was 3.2 €/MWh (11.7%) higher. ERA5 reanalysis wind did worse than the grid operators' forecasts (+1.3 €/MWh) because it describes the weather on a grid of about 31 km, not the output of the actual wind farms (Staffell & Pfenninger, 2016; Olauson, 2018).
 
@@ -236,26 +242,108 @@ Subtracting the error that the solar forecast predicted over the previous 56 day
 
 *Figure 14. Load forecast error by hour, 2023 and 2026.* About 250 MW around 11:00 in 2026 ([03 §1](notebooks/03_forecast.ipynb)).
 
+## 14. The 80% intervals under-predict price spikes, and a 250-day cash-flow-at-risk for a solar PPA fails in summer
+
+Backtests of the kind banks apply to Value-at-Risk models – exact binomial and Kupiec coverage tests, Christoffersen's independence test, the Basel traffic light and the Acerbi–Szekely test of Expected Shortfall – show two weaknesses in the project's uncertainty estimates ([04](notebooks/04_risk_backtesting.ipynb)). The 80% prediction intervals of [section 10](#10-the-forecast-got-tomorrows-direction-right-on-885-of-days-its-80-intervals-covered-6874-of-hours) are too narrow, mostly on the upside: the price rose above the upper bound in 13.8% of hours in January–August 2026 and 20.9% in September, against a target of 10%. For a 1 MW solar PPA, a 99% daily cash-flow-at-risk based on 250 days of history recorded 40 exceptions in 974 days instead of about 10, consistent with its window not reaching back to the previous summer; scaling the history by current volatility cut the exceptions to 24, but no model passed, and all three understate the size of the losses beyond their limits. The settings were revised once, after review, so that each day's risk is forecast before its auction and tested at the Basel levels; no setting was changed to improve a result.
+
+### 14.1 The intervals are too narrow, mostly because they under-predict price spikes (H10)
+
+Across all hours, the price fell outside the 80% interval in 26.2% of hours in January–August and 32.4% in September, against a target of 20% (p < 0.001 in both periods, with errors clustered by day) ([04 §2](notebooks/04_risk_backtesting.ipynb)).
+
+| Share of hours | January–August 2026 | September 2026 | Target |
+|---|---|---|---|
+| Price below the 10% quantile | 12.5% (p = 0.011) | 11.6% (p = 0.558) | 10% |
+| Price above the 90% quantile | 13.8% (p < 0.001) | 20.9% (p = 0.009) | 10% |
+| Price outside the 80% interval | 26.2% (p < 0.001) | 32.4% (p < 0.001) | 20% |
+
+The upper side fails more often than the lower side. The exact binomial test rejects the nominal rate of the upper tail in 10 of the 24 delivery hours in January–August and of the lower tail in 6. In September the lower tail was on target, while the upper tail missed twice as often as it should: even with only 26 days, the exact test rejects it in 11 of the 24 hours. The upper tail missed most at night, on 14–18% of days at 0–5 CET, and at 23 CET (17%). Under the Basel traffic light adapted to a 10% quantile, the upper tail is yellow in 16 of the 24 hours and red in one.
+
+The misses are not clustered from one day to the next, but they come in waves of several weeks. In January–August, Christoffersen's test finds day-to-day dependence in 2 of the 24 hours for the whole interval and in 3 for each tail, about the 1.2 that chance alone produces with 24 tests; September's 26 days are too few for this test. Yet the 14-day share of hours outside the interval moved between about 14% and 46%, with peaks in early February, in March, in late June and July and in mid-September. A test of consecutive days cannot detect such slow waves; they are consistent with the 56-day estimation window catching up with changes in volatility. H10, which expected both too-low coverage and clustered misses, is therefore partly supported.
+
+The past-error benchmark covered better in January–August (24.2% of hours outside), but its misses cluster: Christoffersen's test rejects independence in 11 of the 24 hours, and in September it missed more often (35.5%). Neither method dominates: the benchmark is better calibrated on average, and QRA follows new conditions more closely. For a trader, the upper tail is the one that matters for a short position or a supplier's purchase cost, and it is the tail both methods understate.
+
+![Share of days outside each side of the interval by hour](figures/q4_interval_hits_by_hour.svg)
+
+*Figure 15. Share of days with the price outside each side of the 80% interval, by delivery hour.* Above the 10% target in nearly every hour, the upper side most at night ([04 §2](notebooks/04_risk_backtesting.ipynb)).
+
+![Misses of the 80% prediction interval over time](figures/q4_interval_misses_over_time.svg)
+
+*Figure 16. Misses of the 80% prediction interval, 2026.* The 14-day share of hours outside moved between about 14% and 46% ([04 §2](notebooks/04_risk_backtesting.ipynb)).
+
+### 14.2 For a solar PPA, a 250-day cash-flow-at-risk fails in summer; volatility scaling cuts the exceptions but does not pass (H11)
+
+The position buys the output of 1 MW of solar at a fixed price of 84.5 €/MWh, the 2023 capture price of a solar profile built from ERA5 radiation. Its risk is measured as daily cash-flow-at-risk (CFaR): a quantile of the realized daily settlement, the output in each hour times the price minus 84.5 €/MWh. This is not a market-risk VaR, which would revalue the PPA off a forward curve; it measures what an asset owner's cash flows can lose in a day. Each day's forecast uses data up to the end of the day two days before delivery, before that day's auction ([04 §3](notebooks/04_risk_backtesting.ipynb)). As solar's capture rate fell ([section 6](#6-solars-capture-rate-fell-from-087-to-054-in-the-same-months-of-2023-and-2026-winds-did-not-fall)), the buyer lost on average 47 € a day in 2024, 82 € in 2025 and 91 € in January–August 2026, with a daily standard deviation of 130–172 €.
+
+Three models forecast each day's CFaR, backtested over the 974 days from January 1, 2024 to August 31, 2026 ([04 §4](notebooks/04_risk_backtesting.ipynb)):
+
+| Model | Exceptions at 99% (about 10 expected) | Exceptions at 97.5% (about 24 expected) | Basel zone at 99%: 2024 / 2025 / 2026 | Expected Shortfall test (Z2; 0 if right) |
+|---|---|---|---|---|
+| Historical simulation, 250 days | 40 (4.1%) | 68 (7.0%) | yellow / red / red | −1.98 |
+| Historical simulation, 60 days | 58 (6.0%) | 75 (7.7%) | red / red / red | −2.96 |
+| Filtered historical simulation (EWMA, λ = 0.94) | 24 (2.5%) | 44 (4.5%) | red / green / yellow | −0.89 |
+
+Every exception count differs from its expected rate (exact binomial p < 0.001), the exceptions of every model cluster in time (Christoffersen p < 0.001), and every Z2 is below zero at p < 0.001, so each model also understates how large the losses beyond its limit are.
+
+The 250-day model fails in summer because 250 days – a year of bank trading days – cover only eight months of a market that trades every day. In early summer its window holds the autumn, winter and spring, when a solar PPA hardly produces, but not the previous summer; 28 of its 40 exceptions occurred in May–August. In winter the opposite holds: its CFaR of 456 € was 12 times the average daily cash-flow swing of 37 €, and it recorded no exceptions. With 360 days of history, which reach back to the previous summer, the exceptions fall to 14 ([section 14.3](#143-the-results-depend-on-the-length-of-history-not-on-the-price-or-the-output-scale)).
+
+Scaling past outcomes by current volatility (Hull & White, 1998), with the RiskMetrics decay of 6% a day (J.P. Morgan/Reuters, 1996), lets the CFaR follow the seasons – 125 € in winter, 558 € in summer – and cuts the exceptions to 24. It still fails: 19 of the 24 exceptions fell in spring and autumn, clustered in March and April, when solar output rises faster than the volatility estimate can follow, and its Expected Shortfall is too small as well. A 60-day window adapts to the seasons too, but holds too little history for the tail and recorded 58 exceptions. H11 is supported.
+
+![Solar PPA daily cash flow and 99% cash-flow-at-risk](figures/q4_ppa_cfar_backtest.svg)
+
+*Figure 17. Solar PPA, daily cash flow and 99% cash-flow-at-risk.* The 250-day CFaR stays flat through the seasons; the EWMA-filtered CFaR follows them ([04 §4](notebooks/04_risk_backtesting.ipynb)).
+
+### 14.3 The results depend on the length of history, not on the price or the output scale
+
+Changing one setting at a time ([04 §5](notebooks/04_risk_backtesting.ipynb)):
+
+| Change | Historical simulation: exceptions at 99% | Filtered historical simulation: exceptions at 99% |
+|---|---|---|
+| None (base case) | 40 | 24 |
+| Fixed price 70 or 100 €/MWh (base 84.5) | 36 or 39 | 26 or 24 |
+| Performance ratio 0.75 or 0.95 (base 0.85) | 40 or 40 | 24 or 24 |
+| History 125 or 360 days (base 250) | 62 or 14 | 27 or 17 |
+| EWMA decay λ 0.90 or 0.97 (base 0.94) | not used | 21 or 29 |
+
+The output scale cannot matter: scaling the output scales the cash flows and the forecasts alike. The fixed price matters little. The length of history matters most: 360 days bring the historical simulation into the green zone with 14 exceptions, the most effective single change, while a faster decay (λ = 0.90) helps the filtered model.
+
+In the worst complete spring week, April 20–26, 2026, the buyer lost 2,224 €. That is more than the sum of the seven daily 99% CFaR of the historical simulation (1,980 €), which was breached on 4 of the 7 days; the filtered model's sum (2,779 €) covered the week, with 2 breaches. Combining that week's prices with the output of the sunniest spring week on record, May 8–14, 2023, gives a loss of 2,554 € ([04 §6](notebooks/04_risk_backtesting.ipynb)). The sum of daily CFaR is a simple reference, not a weekly CFaR.
+
+### 14.4 Validation findings
+
+Severity follows a common model-validation scale: high means the model should not be used for its purpose until fixed, medium that it can be used with a documented limitation, and low that the issue concerns scope or documentation.
+
+| Finding | Severity | Evidence | Recommendation |
+|---|---|---|---|
+| The 250-day historical-simulation CFaR is not fit for seasonal solar positions. | High | 40 exceptions at 99% in 974 days, 28 of them in summer; red zone in 2025 and 2026 | Do not base limits on it; use a volatility-scaled model or at least a history of a full year (360 days: 14 exceptions). |
+| No model estimates Expected Shortfall adequately. | High | Z2 from −0.89 to −2.96, p < 0.001 for all three models | Model the tail with more history or a parametric tail before ES is used for limits or capital. |
+| The volatility-scaled CFaR fails when output ramps up in spring. | Medium | 24 exceptions (p < 0.001), 19 of them in spring and autumn | Scale the forecast by the next day's expected solar output and re-test it on new data. |
+| The 80% price intervals under-predict spikes. | Medium | Upper side missed in 13.8% and 20.9% of hours against 10% | Calibrate the quantiles with conformal prediction (Kath & Ziel, 2021), model spikes separately and re-test on data after September 26, 2026. |
+| The measure is a cash-flow-at-risk, not a market-risk VaR. | Low | Realized daily settlement; the PPA is not revalued off a forward curve | For a trading book, revalue the PPA off a forward curve and backtest the change in its value, with a P&L attribution test. |
+
+The backtests have limits of their own. The 974 days contain only three summers; the solar profile is built from radiation, not from a real park; the cash flows leave out balancing and shape costs; Christoffersen's test sees only day-to-day dependence; with 24 hours tested, about 1.2 rejections per test are expected by chance alone; September's 26 days allow only the exact binomial test; and the as-of time and the test levels were revised once after review, before the results reported here were computed.
+
 ---
 
-## 14. Limits
+## 15. Limits
 
-Four limits bound the numbers above.
+Five limits bound the numbers above.
 
 1. Realized weather and possibly late forecasts. Notebook 01 uses ERA5 weather that occurred, which biases the wind effect towards zero. Day-ahead wind and solar forecasts may be published up to six hours after the auction (European Commission, 2013); without them the forecast still beats repeating yesterday's prices by 28% ([section 8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices)).
 2. Short test periods. The forecasts were tested on 243 days in January–August 2026, which notebook 01 had already used and which revealed the weaknesses v2 was built to fix, and on 26 clean days in September; a benchmark study recommends at least 365 days (Lago et al., 2021). Using one period for several decisions is a form of data snooping (White, 2000).
 3. Incomplete data. ENTSO-E may miss part of the 170,000 prosumers' output, which understates solar volumes more than capture rates, because rooftop panels follow the same daily curve as the measured solar parks. Prices have cleared in 15-minute periods since October 1, 2025, and averaging them to hours hides negative quarter-hours. NordBalt's offered capacity is missing for September 9–26, 2026 (18 days); the model then repeated the last known 700 MW for up to a week, so a maintenance outage reported that month was invisible to it.
 4. Simplified economics. The battery test runs one cycle a day, without fees, degradation, price impact or balancing revenues. The curtailment estimate averages over market-exposed parks and older parks on fixed tariffs, which have no reason to stop (European Commission, 2014, §3.3.2).
+5. Multiple tests and the order of decisions. Eleven hypotheses and many robustness variants were tested without a multiple-testing adjustment, so results with p-values between 0.04 and 0.07 – the placebo (0.064), H9 (0.064) and v2's gain on the clean test (0.041) – are tentative. The order of the decisions, with the main model fixed before the test period was scored, is documented in the notebooks but was not time-stamped by a third party.
 
-## 15. Next steps
+## 16. Next steps
 
 Any new model version would need to be tested on data after September 26, 2026. At September's volatility, about 50 days (seven weeks) of new data give an 80% chance of detecting a 1.35 €/MWh improvement; 365 days are needed to cover every season.
 
 1. Forecasting what a desk trades: the spread between day-ahead and imbalance or intraday prices, and price spreads between Lithuania and Estonia, Sweden and Poland, judged by euros earned. Imbalance prices are available from the ENTSO-E interface used here.
 2. Adding the inputs that explain spikes: neighbors' actual output (Poland first), REMIT outage messages, interconnector availability and weather forecasts as published before the auction.
-3. Calibrating the intervals with conformal prediction (Kath & Ziel, 2021), testing their coverage formally (Kupiec, 1995; Christoffersen, 1998), and modeling spike risk directly (Marcjasz et al., 2023).
+3. Calibrating the intervals with conformal prediction (Kath & Ziel, 2021) and modeling spike risk directly (Marcjasz et al., 2023): the backtests in [section 14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer) show that the upper tail is where the intervals fail.
 4. Moving to quarter-hours, the resolution of the day-ahead market and of battery revenues since October 2025.
 5. Measuring Nordic hydro from weather: precipitation, snow and runoff anomalies over Swedish and Finnish catchments, at weekly frequency.
+6. Scaling the solar PPA's cash-flow-at-risk by the next day's expected output, so that it follows the spring ramp-up; revaluing the PPA off a forward curve for a market-risk VaR; and re-testing both on new data.
 
 ---
 
@@ -286,24 +374,34 @@ The raw data are processed with DuckDB and SQL into one hourly table: `lt_hourly
 
 ### A.4 Notebook 03: forecasting
 
-- Information set. What is known at 12:00 CET on the day before delivery: prices of the three previous days and of a week earlier, neighbors' prices of the day before, day-ahead load, wind and solar forecasts for Lithuania and five neighboring regions, gas and carbon closes two days before, Nordic hydro published at least 11 days before, holidays and the Estlink 2 outage. Days follow the auction's CET clock, and automatic checks confirm that no input uses later information – apart from the possible late publication of wind and solar forecasts ([section 14](#14-limits)).
+- Information set. What is known at 12:00 CET on the day before delivery: prices of the three previous days and of a week earlier, neighbors' prices of the day before, day-ahead load, wind and solar forecasts for Lithuania and five neighboring regions, gas and carbon closes two days before, Nordic hydro published at least 11 days before, holidays and the Estlink 2 outage. Days follow the auction's CET clock, and automatic checks confirm that no input uses later information – apart from the possible late publication of wind and solar forecasts ([section 15](#15-limits)).
 - Models. Repeating yesterday's prices (last week's on Mondays and weekends); Lasso (Tibshirani, 1996) with one model per delivery hour (Uniejewski et al., 2016; Lago et al., 2021); LightGBM (Ke et al., 2017); and their average, fixed in advance as the main model. Prices are transformed with a scaled inverse hyperbolic sine before training (Uniejewski et al., 2018).
 - Evaluation. Training to September 2025; settings chosen on October–December 2025; forecasts day by day for January–August 2026 and September 1–26, 2026, re-training Lasso daily and LightGBM weekly (daily in v2). Diebold–Mariano (Diebold & Mariano, 1995) and Giacomini–White (Giacomini & White, 2006) tests compare models on daily errors.
 - Uncertainty and value. 80% intervals by quantile regression averaging (Koenker & Bassett, 1978; Nowotarski & Weron, 2015), scored by coverage and pinball loss; a battery schedule optimized each day by linear programming on the forecast prices and settled at the actual prices.
+
+### A.5 Notebook 04: backtesting the uncertainty
+
+- Intervals. The 80% QRA intervals of notebook 03 and the past-error benchmark, January–August and September 2026; daily hit sequences for each tail and delivery hour; exact binomial and Kupiec coverage tests, Christoffersen's independence test and their joint conditional-coverage test, the independence test only on samples of at least 100 days; the Basel traffic light generalized to any level (green below the 95% point of the binomial distribution, red from 99.99%; Basel Committee on Banking Supervision, 1996); and a test of all hours together with errors clustered by day.
+- Solar PPA. The output of 1 MW of solar is 0.85 × ERA5 radiation ÷ 1,000 W/m², at most 1 MW; the fixed price is 84.5 €/MWh, the 2023 capture price of that profile; the daily cash flow is the sum over hours of output × (price − 84.5).
+- Cash-flow-at-risk and ES. 99% and 97.5% CFaR, the levels at which the Basel market-risk framework backtests, and 97.5% ES (Basel Committee on Banking Supervision, 2019), from historical simulation over 250 and 60 days and from filtered historical simulation, which divides past cash flows by their EWMA volatility (λ = 0.94) and rescales them by the current one (Hull & White, 1998). Each forecast uses data up to the end of the day two days before delivery. The backtest runs from January 1, 2024 to August 31, 2026 (974 days). ES is tested with the Z2 statistic of Acerbi and Szekely (2014), whose p-value is simulated 2,000 times from each model's own forecast distribution.
+- Sensitivity and stress. One setting changed at a time: the fixed price (70 and 100 €/MWh), the performance ratio (0.75 and 0.95), the history (125 and 360 days) and λ (0.90 and 0.97); the worst complete spring week, and a hypothetical week that combines its prices with the output of the sunniest spring week.
+- Revision. The first version forecast each day from data up to the day before, at 95% and 99%; after review, the as-of time and the levels were changed as described above. No setting was changed to improve a result.
 
 ## Appendix B. Hypotheses and verdicts
 
 | | Hypothesis | Verdict | Evidence | Section |
 |---|---|---|---|---|
 | H1 | Stronger wind in the Baltic states lowers the Lithuanian day-ahead price, holding demand, solar, gas, Nordic hydro and calendar effects fixed. | Supported | −7.6 €/MWh per +10 percentage points (95% CI −8.5 to −6.7) | [2](#2-a-typical-windy-hour-was-17-mwh-19-cheaper-than-a-typical-calm-one) |
-| H2 | The effect of Baltic wind on the price has grown from 2023 to 2026 as installed wind capacity increased. | Partly supported | −5.3 €/MWh in 2023 → −7.6 in 2026 (p = 0.04), but −11.1 in 2025, when Estlink 2 was out | [4](#4-while-estlink-2-was-out-the-same-wind-was-associated-with-a-68-larger-price-reduction-added-turbines-did-not-change-the-effect) |
-| H3 | Nordic and Continental wind also lower the Lithuanian price; without them the Baltic wind effect is overstated. | Supported | without them, the Baltic effect reads −11.4 instead of −7.6 €/MWh | [3](#3-neighbors-wind-moves-the-lithuanian-price-98-as-much-as-baltic-wind) |
+| H2 | The effect of Baltic wind on the price has grown from 2023 to 2026 as installed wind capacity increased. | Partly supported | −5.3 €/MWh in 2023 → −7.6 in 2026 (p = 0.04), but −11.1 in 2025, when Estlink 2 was out | [4](#4-while-estlink-2-was-out-the-same-wind-was-associated-with-a-larger-price-reduction-added-turbines-did-not-change-the-effect) |
+| H3 | Nordic and Continental wind also lower the Lithuanian price; without them the Baltic wind effect is overstated. | Supported | without them, the Baltic effect reads −11.4 instead of −7.6 €/MWh | [3](#3-nordic-wind-moves-the-lithuanian-price-about-as-much-as-baltic-wind) |
 | H4 | Wind lowers the price more when natural gas is expensive, because it displaces gas-fired plants. | Not supported | −7.0 €/MWh at 28 €/MWh gas, −7.8 at 52 (p = 0.39) | [5](#5-gas-prices-and-nordic-hydro-did-not-change-the-wind-effect) |
 | H5 | More water than normal in Nordic hydro reservoirs lowers the Lithuanian price. | Not supported | +5.0 €/MWh per +10 TWh, p = 0.049 when clustered by month | [5](#5-gas-prices-and-nordic-hydro-did-not-change-the-wind-effect) |
 | H6 | In hours with a negative price, wind farms produce less than the wind would allow, because some farms stop to avoid losses. | Supported | 18% lower output (95% CI 10–26%), 0.9% in the 0–10 €/MWh placebo band | [7](#7-wind-farms-held-back-18-of-their-output-at-negative-prices-08-of-their-2025-production) |
 | H7 | The capture rates of wind and solar are below 1 and fell over 2023–2026; solar's is lower and falls faster. | Partly supported | solar −8.4 percentage points a year; wind +0.25 (p = 0.74) | [6](#6-solars-capture-rate-fell-from-087-to-054-in-the-same-months-of-2023-and-2026-winds-did-not-fall) |
 | H8 | A model that uses only information available before the auction forecasts tomorrow's hourly prices more accurately than a naive benchmark (Diebold–Mariano p < 0.05). | Supported | 24.6 against 41.8 €/MWh (p < 0.001) | [8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices) |
 | H9 | Replacing Lithuania's wind forecast with the wind output that actually occurred makes the price forecast more accurate. | Not supported | 27.8 against 27.1 €/MWh (p = 0.064) | [12](#12-knowing-the-wind-that-actually-blew-made-the-forecast-25-worse) |
+| H10 | Stated before the backtest: the 80% prediction intervals cover less than 80% of hours, and their misses cluster in time. | Partly supported | coverage 74% and 68% (p < 0.001); day-to-day clustering in only 2 of 24 hours, but waves of several weeks | [14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer) |
+| H11 | Stated before the backtest: a 250-day historical-simulation risk forecast for a solar PPA overstates risk in winter and understates it in summer, and EWMA filtering reduces its failures. | Supported | winter CFaR 12 times the typical daily cash flow, with no exceptions; 28 of 40 exceptions in summer; EWMA: 24 exceptions | [14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer) |
 
 H9 was re-specified during the analysis: the first design used ERA5 wind as the "perfect" information, which measured wind output less accurately than the grid operators' forecasts (28.4 against 27.1 €/MWh).
 
@@ -311,12 +409,14 @@ H9 was re-specified during the analysis: the first design used ERA5 wind as the 
 
 ### Academic literature
 
+- Acerbi, C., & Szekely, B. (2014). Back-testing expected shortfall. *Risk*, 27(11), 76–81.
 - Cameron, A. C., & Miller, D. L. (2015). A practitioner's guide to cluster-robust inference. *Journal of Human Resources*, 50(2), 317–372. https://doi.org/10.3368/jhr.50.2.317
 - Christoffersen, P. F. (1998). Evaluating interval forecasts. *International Economic Review*, 39(4), 841–862.
 - Diebold, F. X., & Mariano, R. S. (1995). Comparing predictive accuracy. *Journal of Business & Economic Statistics*, 13(3), 253–263.
 - Giacomini, R., & White, H. (2006). Tests of conditional predictive ability. *Econometrica*, 74(6), 1545–1578.
 - Hersbach, H., et al. (2020). The ERA5 global reanalysis. *Quarterly Journal of the Royal Meteorological Society*, 146(730), 1999–2049. https://doi.org/10.1002/qj.3803
 - Hirth, L. (2013). The market value of variable renewables: The effect of solar wind power variability on their relative price. *Energy Economics*, 38, 218–236. https://doi.org/10.1016/j.eneco.2013.02.004
+- Hull, J., & White, A. (1998). Incorporating volatility updating into the historical simulation method for value-at-risk. *Journal of Risk*, 1(1), 5–19.
 - Kath, C., & Ziel, F. (2021). Conformal prediction interval estimation and applications to day-ahead and intraday power markets. *International Journal of Forecasting*, 37(2), 777–799. https://doi.org/10.1016/j.ijforecast.2020.09.006
 - Ke, G., Meng, Q., Finley, T., Wang, T., Chen, W., Ma, W., Ye, Q., & Liu, T.-Y. (2017). LightGBM: A highly efficient gradient boosting decision tree. *Advances in Neural Information Processing Systems*, 30.
 - Kiesel, R., & Paraschiv, F. (2017). Econometric analysis of 15-minute intraday electricity prices. *Energy Economics*, 64, 77–90.
@@ -339,6 +439,8 @@ H9 was re-specified during the analysis: the first design used ERA5 wind as the 
 ### Regulation, market information and news
 
 - AST (2025). *Baltic balancing capacity market launched on February 4, 2025.* https://www.ast.lv/en/node/86619
+- Basel Committee on Banking Supervision (1996). *Supervisory framework for the use of "backtesting" in conjunction with the internal models approach to market risk capital requirements.* Bank for International Settlements.
+- Basel Committee on Banking Supervision (2019). *Minimum capital requirements for market risk.* Bank for International Settlements.
 - Elering (2025). *EstLink 2 back on the market.* https://elering.ee/en/node/3909
 - ESS News (2025). *Lithuania's Ignitis Group to add 582 MWh of battery storage projects.* https://www.ess-news.com/?p=5724
 - European Commission (2013). Commission Regulation (EU) No 543/2013 on submission and publication of data in electricity markets. *Official Journal of the European Union*, L 163, 1–12. https://eur-lex.europa.eu/eli/reg/2013/543/oj
@@ -346,6 +448,7 @@ H9 was re-specified during the analysis: the first design used ERA5 wind as the 
 - Helsinki Times (2025). *Estlink 2 power link restored after six-month outage.* https://www.helsinkitimes.fi/finland/finland-news/domestic/27201-estlink-2-power-link-restored-after-six-month-outage.html
 - Ignitis Group (2025). *Ignitis Group starts building battery energy storage parks in Lithuania.* https://ignitisgrupe.lt/en/news/ignitis-group-starts-building-battery-energy-storage-parks-lithuania
 - Ignitis Group (2026). *Ignitis Renewables: Lithuania emerges as a European wind power leader.* https://ignitisgrupe.lt/en/news/ignitis-renewables-lithuania-emerges-european-wind-power-leader
+- J.P. Morgan/Reuters (1996). *RiskMetrics – Technical Document* (4th ed.). J.P. Morgan.
 - NEMO Committee (2025). *15-minute MTU in SDAC was implemented.* https://nemo-committee.eu/assets/files/15-minute-mtu-in-sdac-was-implemented.pdf
 - pv magazine (2026, March 30). *Lithuania's solar capacity surpasses 3 GW.* https://www.pv-magazine.com/2026/03/30/lithuanias-solar-capacity-surpasses-3-gw/
 - World Wind Energy Association (WWEA). *Global Statistics.* https://wwindea.org/GlobalStatistics

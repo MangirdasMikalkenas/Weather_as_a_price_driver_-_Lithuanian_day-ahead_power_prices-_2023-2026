@@ -1,16 +1,17 @@
 # Weather as a price driver: Lithuanian day-ahead power prices, 2023–2026
 
-This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**.
+This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
 ## Key results
 
-- A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and wind in the neighboring regions moved the price 98% as much as Baltic wind.
-- While the Estlink 2 cable was out (December 25, 2024 – June 20, 2025), the same wind was associated with a 68% larger price reduction; the turbines added in 2024–2025 did not change the effect.
+- A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and Nordic wind moved the price about as much as Baltic wind (−7.4 against −7.6 €/MWh, with overlapping confidence intervals).
+- While the Estlink 2 cable was out (December 25, 2024 – June 20, 2025), +10 percentage points of wind were associated with an extra price reduction of 5.1–8.1 €/MWh, depending on the specification, in a single 177-day event; the turbines added in 2024–2025 did not change the effect.
 - Solar's capture rate fell from 0.87 to 0.54 between January–August 2023 and January–August 2026, while wind's showed no downward trend; wind farms held back 18% of their output in negative-price hours, 0.8% of their 2025 production.
-- The forecast's mean absolute error was 24.6 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 4% better on September 2026, and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
-- Replacing the wind forecast with the wind that actually blew made the day-ahead forecast 2.5% worse, consistent with the auction pricing expectations rather than outcomes.
+- The forecast's mean absolute error was 24.6 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 4% better on September 2026, a statistically uncertain gain (p = 0.04–0.19), and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
+- Replacing the wind forecast with the wind that actually blew made the day-ahead forecast 2.5% worse (p = 0.064), consistent with the auction pricing expectations rather than outcomes; this tests perfect hindsight, not a better forecast made before the auction.
+- In backtests with exact binomial, Christoffersen, Basel traffic-light and Acerbi–Szekely tests, the forecast's 80% intervals under-predicted price spikes (the price exceeded the upper bound in 13.8% of hours against 10%), and a 99% cash-flow-at-risk for a solar PPA based on 250 days of history failed in summer (40 exceptions in 974 days against about 10); volatility scaling cut the exceptions to 24 and a full year of history to 14.
 
-Nine hypotheses were tested: four were supported, two partly supported and three not supported ([Appendix B of the analysis](results_analysis.md#appendix-b-hypotheses-and-verdicts)).
+Eleven hypotheses were tested: five were supported, three partly supported and three not supported ([Appendix B of the analysis](results_analysis.md#appendix-b-hypotheses-and-verdicts)).
 
 ## Contents
 
@@ -31,8 +32,8 @@ Nine hypotheses were tested: four were supported, two partly supported and three
 ```text
 .
 ├── README.md
-├── results_analysis.md          # results, recommendations and interpretation
-├── requirements.txt             # the complete tested environment
+├── results_analysis.md          # results, recommendations and interpretation (top-down)
+├── requirements.txt             # the complete tested environment (pip freeze)
 ├── src/                         # data download, processing and database build
 │   ├── download_entsoe.py
 │   ├── download_era5.py
@@ -48,7 +49,8 @@ Nine hypotheses were tested: four were supported, two partly supported and three
 ├── notebooks/                   # code and section titles only; interpretation is in results_analysis.md
 │   ├── 01_price_drivers.ipynb   # question 1: what drives the price (H1–H5)
 │   ├── 02_wind_value.ipynb      # question 2: what wind and solar are worth (H6–H7)
-│   └── 03_forecast.ipynb        # question 3: forecasting tomorrow's prices (H8–H9)
+│   ├── 03_forecast.ipynb        # question 3: forecasting tomorrow's prices (H8–H9)
+│   └── 04_risk_backtesting.ipynb # backtesting the uncertainty: intervals and a solar PPA cash-flow-at-risk (H10–H11)
 ├── figures/                     # charts (SVG and PNG) and summary tables (CSV) written by the notebooks
 └── data/                        # not committed: downloads, processed ERA5, database, forecast cache
     ├── raw/entsoe/              # one CSV per dataset, zone and month
@@ -63,10 +65,10 @@ Nine hypotheses were tested: four were supported, two partly supported and three
 
 ## Quick start
 
-All commands run from the repository root.
+Requires Python 3.12 (the results were produced with 3.12.3). All commands run from the repository root.
 
 ```bash
-python -m venv .venv
+python3.12 -m venv .venv             # Python 3.12 (tested with 3.12.3); Windows: py -3.12 -m venv .venv
 source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
@@ -78,7 +80,7 @@ python src/process_era5.py           # ERA5 grid -> hourly indices per country
 python src/download_gas.py           # TTF gas and the carbon price proxy
 python src/build_db.py               # rebuilds data/lt_power.duckdb and runs the quality checks
 
-# run notebooks/01, 02 and 03 with "Run All" in VS Code (Jupyter extension) or JupyterLab
+# run notebooks/01–04 in order with "Run All" in VS Code (Jupyter extension) or JupyterLab
 ```
 
 | Step | Typical run time |
@@ -91,6 +93,7 @@ python src/build_db.py               # rebuilds data/lt_power.duckdb and runs th
 | Notebook 01 | a few minutes |
 | Notebook 02 | under a minute |
 | Notebook 03, first run | about 1.5–2 hours; later runs 5–8 minutes from the stored results |
+| Notebook 04 | under a minute (it reads the stored results of notebook 03) |
 
 ## Setup
 
@@ -235,14 +238,15 @@ The notebooks contain code and section titles only; the interpretation of every 
 | `01_price_drivers.ipynb` | How, and by how much, does the weather change the price? | H1–H5 | `lt_hourly` | 5 charts, `q1_summary.csv`, `q1_followup.csv` |
 | `02_wind_value.ipynb` | What are wind and solar output worth, and how much wind output is held back at negative prices? | H6–H7 | `lt_hourly`, `capture_rates_monthly` | 5 charts, `q2_summary.csv` |
 | `03_forecast.ipynb` | How accurately can tomorrow's hourly prices be forecast, and what is better information worth? | H8–H9 | `lt_hourly_all` and the neighbors' forecasts, capacities and carbon proxy | 8 charts, `q3_summary.csv`, `q3_followup.csv`, `q3_v2_summary.csv` |
+| `04_risk_backtesting.ipynb` | How reliable are the uncertainty estimates: the forecast's 80% intervals and the cash-flow-at-risk of a solar PPA? | H10–H11 | `lt_hourly_all` and the stored intervals of notebook 03 | 3 charts, `q4_summary.csv` |
 
-A complete run writes 42 files to `figures/`: 18 charts in two formats and 6 CSV tables.
+A complete run writes 49 files to `figures/`: 21 charts in two formats and 7 CSV tables.
 
 **Notebook 03 in more detail.**
 
 - **Information set.** Only information known at 12:00 CET on the day before delivery, the day-ahead auction deadline; days follow the auction's CET clock, and automatic checks confirm that no input uses later information (day-ahead wind and solar forecasts may be published after the auction; see section 14 of the analysis).
 - **Periods.** Training to September 2025; validation October–December 2025 (settings only); test January–August 2026; clean test September 1–26, 2026, used for no decision.
-- **Models.** A naive benchmark (yesterday's prices; last week's on Mondays and weekends), Lasso with one model per delivery hour, LightGBM, their pre-registered average, and an improved version (v2) chosen on the validation period; 80% prediction intervals by quantile regression averaging; a battery schedule optimized by linear programming.
+- **Models.** A naive benchmark (yesterday's prices; last week's on Mondays and weekends), Lasso with one model per delivery hour, LightGBM, their average (fixed in advance as the main model), and an improved version (v2) chosen on the validation period; 80% prediction intervals by quantile regression averaging; a battery schedule optimized by linear programming.
 - **Run time and cache.** The first full run takes about 1.5–2 hours. Long results are stored in `data/processed/q3_cache/`, so later runs take 5–8 minutes; delete that folder to recompute everything, for example after new data. Setting `FAST = True` at the top runs a quick test of about 5 minutes with monthly re-training.
 - **Determinism.** Results are reproducible for the same data: `SEED = 42`, LightGBM runs with `deterministic=True`, and Lasso runs single-threaded.
 
@@ -270,6 +274,7 @@ A complete run writes 42 files to `figures/`: 18 charts in two formats and 6 CSV
 | `lt_hourly` does not have 32,135 hours | Some ENTSO-E or ERA5 months are missing; re-run the downloads and `build_db.py`. |
 | Notebook 03 takes too long | Use `FAST = True` for a test run; the full results are stored after the first run. |
 | Old charts in `figures/` | Delete the folder's contents and re-run the notebooks; every current file is recreated. |
+| `intervals.pkl not found` in notebook 04 | Run notebook 03 with `FAST = False` first; notebook 04 reads its stored intervals. |
 
 ## Data sources and attribution
 
