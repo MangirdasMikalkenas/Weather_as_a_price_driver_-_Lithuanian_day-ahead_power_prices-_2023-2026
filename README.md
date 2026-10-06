@@ -60,7 +60,7 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
     ├── raw/era5/                # one folder of NetCDF files per month
     ├── raw/gas/                 # TTF gas and the carbon price proxy
     ├── processed/era5_regions.csv
-    ├── processed/q3_cache/      # stored forecasts of notebook 03
+    ├── processed/q3_cache/      # stored forecasts of notebook 03, keyed by the code and data that produced them
     └── lt_power.duckdb          # rebuilt by src/build_db.py
 ```
 
@@ -251,17 +251,18 @@ A complete run writes 49 files to `figures/`: 21 charts in two formats and 7 CSV
 - **Information set.** Only information known at 12:00 CET on the day before delivery, the day-ahead auction deadline; days follow the auction's CET clock, and automatic checks confirm that no input uses later information (day-ahead wind and solar forecasts may be published after the auction; see section 14 of the analysis).
 - **Periods.** Training to September 2025; validation October–December 2025 (settings only); test January–August 2026; clean test September 1–26, 2026, used for no decision.
 - **Models.** A naive benchmark (yesterday's prices; last week's on Mondays and weekends), Lasso with one model per delivery hour, LightGBM, their average (fixed in advance as the main model), and an improved version (v2) chosen on the validation period; 80% prediction intervals by quantile regression averaging; a battery schedule optimized by linear programming.
-- **Run time and cache.** The first full run takes about 1.5–2 hours. Long results are stored in `data/processed/q3_cache/`, so later runs take 5–8 minutes; delete that folder to recompute everything, for example after new data. Setting `FAST = True` at the top runs a quick test of about 5 minutes with monthly re-training.
+- **Run time and cache.** The first full run takes about 1.5–2 hours. Long results are stored in `data/processed/q3_cache/` under a key that hashes the model code, the model inputs and the settings, so a change to any of them recomputes the affected results automatically and later runs take 5–8 minutes. Each stored result prints when, at which git commit and in how long it was computed, together with the warnings it raised and the Lasso safeguard counts; warnings are counted, not hidden. Deleting the folder forces a full recomputation. Setting `FAST = True` at the top runs a quick test of about 5 minutes with monthly re-training.
 - **Determinism.** Results are reproducible for the same data: `SEED = 42`, LightGBM runs with `deterministic=True`, and Lasso runs single-threaded.
 
 ## Updating to newer data
 
 1. Move `END` (and `EXTEND_FROM`, the end of the previous download) in `src/download_entsoe.py`, `END` in `src/download_gas.py` and `END` in `src/download_era5.py`, then re-run the pipeline.
 2. `lt_hourly` stays fixed at January 2023 – August 2026, so notebooks 01–02 keep their results; to extend them, change the date in `sql/03_analysis_table.sql`.
-3. Delete `data/processed/q3_cache/` before re-running notebook 03. Any new model version should be judged only on data after September 26, 2026, the last day already used.
+3. Re-run notebook 03; it recomputes its stored results automatically when the data or the code change. Any new model version should be judged only on data after September 26, 2026, the last day already used.
 
 ## Reproducibility
 
+- **Provenance.** Every stored result of notebook 03 records its date, the git commit of the code and the warnings of its computation. Running the notebook from a committed state lets the commit identify the code exactly; the label notes uncommitted changes to `sql/` or `src/`.
 - **Data vintages.** ENTSO-E revises published data, the most recent ERA5 months are preliminary (ERA5T) and Yahoo Finance history can be adjusted, so a rebuild at a later date may differ slightly from the committed results.
 - **Fixed analysis period.** Notebooks 01–02 read `lt_hourly`, fixed to January 2023 – August 2026, so adding newer data does not change their results.
 - **Packages.** `requirements.txt` pins every installed package to the version the results were produced with.
@@ -278,7 +279,7 @@ A complete run writes 49 files to `figures/`: 21 charts in two formats and 7 CSV
 | `lt_hourly` does not have 32,135 hours | Some ENTSO-E or ERA5 months are missing; re-run the downloads and `build_db.py`. |
 | Notebook 03 takes too long | Use `FAST = True` for a test run; the full results are stored after the first run. |
 | Old charts in `figures/` | Delete the folder's contents and re-run the notebooks; every current file is recreated. |
-| `intervals.pkl not found` in notebook 04 | Run notebook 03 with `FAST = False` first; notebook 04 reads its stored intervals. |
+| `No intervals in data/processed/q3_cache` in notebook 04 | Run notebook 03 with `FAST = False` first; notebook 04 reads the intervals it stores. |
 
 ## Data sources and attribution
 

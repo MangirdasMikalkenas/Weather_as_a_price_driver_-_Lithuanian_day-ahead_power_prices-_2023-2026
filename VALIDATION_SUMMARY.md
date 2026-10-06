@@ -27,5 +27,5 @@ This repository builds three kinds of models on public Lithuanian power-market d
 ## Scope and open issues
 
 - The PPA measure is a cash-flow-at-risk on realized settlement, not a market-risk VaR: the PPA is not revalued off a forward curve, there is no risk-factor mapping, and no bank product (bonds, swaps, options) is modeled, so PFE, IRRBB and P&L attribution are out of scope.
-- Fixed after review: the forecast inputs no longer use a load forecast cleaned with the actual load of the same hour; the cleaning now compares with the load of a week earlier, known at the auction, and the forecasts were recomputed.
-- Open: the stored forecasts are not yet tied to versions of the code and data; and the order of decisions is documented in the notebooks but not time-stamped by a third party.
+- Fixed after review: the forecast inputs no longer use a load forecast cleaned with the actual load of the same hour; the cleaning now compares with the load of a week earlier, known at the auction, and the forecasts were recomputed. Stored forecasts are keyed to the code and data that produced them and record their date, git commit and warnings, which are counted rather than hidden.
+- Open: the order of decisions is documented in the notebooks but not time-stamped by a third party.
