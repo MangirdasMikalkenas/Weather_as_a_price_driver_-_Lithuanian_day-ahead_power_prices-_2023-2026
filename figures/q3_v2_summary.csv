@@ -1,11 +1,11 @@
 finding,estimate
 "Validation choice, Lasso","v2 inputs, windows 56/84/364/728"
 "Validation choice, LightGBM","v2 inputs, averaged half-lives"
-"test (Jan–Aug 2026, indicative): MAE v2 main vs v1 ensemble","22.88 vs 24.57 €/MWh (7% lower; DM p < 0.001, GW p < 0.001)"
+"test (Jan–Aug 2026, indicative): MAE v2 main vs v1 ensemble","23.02 vs 24.77 €/MWh (7% lower; DM p < 0.001, GW p < 0.001)"
 "test (Jan–Aug 2026, indicative): MAE relative to the weekly naive, v1 / v2",0.49 / 0.45
-"test (Jan–Aug 2026, indicative): 80% interval (QRA)","covers 74% of hours, mean width 66 €/MWh"
-"fresh (01 Sep–26 Sep 2026, clean): MAE v2 main vs v1 ensemble","32.83 vs 34.19 €/MWh (4% lower; DM p = 0.041, GW p = 0.189)"
-"fresh (01 Sep–26 Sep 2026, clean): MAE relative to the weekly naive, v1 / v2",0.39 / 0.38
-"fresh (01 Sep–26 Sep 2026, clean): 80% interval (QRA)","covers 68% of hours, mean width 83 €/MWh"
+"test (Jan–Aug 2026, indicative): 80% interval (QRA)","covers 74% of hours, mean width 67 €/MWh"
+"fresh (01 Sep–26 Sep 2026, clean): MAE v2 main vs v1 ensemble","32.45 vs 34.13 €/MWh (5% lower; DM p < 0.001, GW p = 0.069)"
+"fresh (01 Sep–26 Sep 2026, clean): MAE relative to the weekly naive, v1 / v2",0.39 / 0.37
+"fresh (01 Sep–26 Sep 2026, clean): 80% interval (QRA)","covers 68% of hours, mean width 84 €/MWh"
 "test (Jan–Aug 2026, indicative): battery value captured (share of perfect foresight), v1 / v2",89% / 89%
-"fresh (01 Sep–26 Sep 2026, clean): battery value captured (share of perfect foresight), v1 / v2",85% / 86%
+"fresh (01 Sep–26 Sep 2026, clean): battery value captured (share of perfect foresight), v1 / v2",85% / 84%

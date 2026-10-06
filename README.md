@@ -2,16 +2,18 @@
 
 This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
+**For a model-validation reader:** [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) rates the models and their backtests on one page, with decisions and findings by severity.
+
 ## Key results
 
 - A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and Nordic wind moved the price about as much as Baltic wind (−7.4 against −7.6 €/MWh, with overlapping confidence intervals).
 - While the Estlink 2 cable was out (December 25, 2024 – June 20, 2025), +10 percentage points of wind were associated with an extra price reduction of 5.1–8.1 €/MWh, depending on the specification, in a single 177-day event; the turbines added in 2024–2025 did not change the effect.
 - Solar's capture rate fell from 0.87 to 0.54 between January–August 2023 and January–August 2026, while wind's showed no downward trend; wind farms held back 18% of their output in negative-price hours, 0.8% of their 2025 production.
-- The forecast's mean absolute error was 24.6 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 4% better on September 2026, a statistically uncertain gain (p = 0.04–0.19), and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
-- Replacing the wind forecast with the wind that actually blew made the day-ahead forecast 2.5% worse (p = 0.064), consistent with the auction pricing expectations rather than outcomes; this tests perfect hindsight, not a better forecast made before the auction.
-- In backtests with exact binomial, Christoffersen, Basel traffic-light and Acerbi–Szekely tests, the forecast's 80% intervals under-predicted price spikes (the price exceeded the upper bound in 13.8% of hours against 10%), and a 99% cash-flow-at-risk for a solar PPA based on 250 days of history failed in summer (40 exceptions in 974 days against about 10); volatility scaling cut the exceptions to 24 and a full year of history to 14.
+- The forecast's mean absolute error was 24.8 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 5% better on September 2026 (Diebold–Mariano p < 0.001, Giacomini–White p = 0.069), and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
+- Replacing the wind forecast with the wind that actually blew made the day-ahead forecast 4% worse (p = 0.003), consistent with the auction pricing expectations rather than outcomes; this tests perfect hindsight, not a better forecast made before the auction.
+- In backtests with exact binomial, Christoffersen, Basel traffic-light and Acerbi–Szekely tests, the forecast's 80% intervals under-predicted price spikes (the price exceeded the upper bound in 13.5% of hours against 10%), and a 99% cash-flow-at-risk for a solar PPA based on 250 days of history failed in summer (40 exceptions in 974 days against about 10); volatility scaling cut the exceptions to 24 and a full year of history to 14.
 
-Eleven hypotheses were tested: five were supported, three partly supported and three not supported ([Appendix B of the analysis](results_analysis.md#appendix-b-hypotheses-and-verdicts)).
+Eleven hypotheses were tested: six were supported, two partly supported and three not supported ([Appendix B of the analysis](results_analysis.md#appendix-b-hypotheses-and-verdicts)).
 
 ## Contents
 
@@ -33,6 +35,7 @@ Eleven hypotheses were tested: five were supported, three partly supported and t
 .
 ├── README.md
 ├── results_analysis.md          # results, recommendations and interpretation (top-down)
+├── VALIDATION_SUMMARY.md        # one-page validation summary: decisions and findings by severity
 ├── requirements.txt             # the complete tested environment (pip freeze)
 ├── src/                         # data download, processing and database build
 │   ├── download_entsoe.py
@@ -191,6 +194,7 @@ prices out of range                      0
 gaps in ERA5 series                      0
 hydro weeks missing a zone (excluded)    7
 load forecast hours cleaned (excluded)   174
+load forecast hours cleaned before the auction   283
 
 lt_hourly: 32,135 hours ready for analysis (questions 1-2, to August 2026)
 lt_hourly_all: 32,759 hours (question 3, all available data)
@@ -209,7 +213,7 @@ All timestamps are UTC and mark the start of the interval they describe. MW valu
 | | `gas_daily`, `eua_daily` | daily TTF gas and carbon proxy closes |
 | Cleaned views (`02_clean.sql`) | `price_hourly`, `price_hourly_wide` | hourly day-ahead prices per zone (15-minute prices averaged), long and one column per zone |
 | | `lt_generation_hourly` | Lithuanian generation by type; storage is net (negative while pumping or charging) |
-| | `lt_load_hourly` | Lithuanian actual load and day-ahead forecast; a forecast of zero or one that misses the actual load by more than 50% is a data error and set to NULL |
+| | `lt_load_hourly` | Lithuanian actual load and day-ahead forecast. A forecast of zero is a data error. `load_forecast_mw` also removes forecasts that miss the actual load of the same hour by more than 50%, which uses the outcome and serves notebooks 01–02 only; `load_forecast_exante_mw` instead compares with the actual load of the same hour a week earlier, known at the auction, and feeds the forecasts of notebook 03 |
 | | `lt_res_forecast_hourly` | Lithuanian day-ahead wind and solar forecasts |
 | | `forecast_hourly_zone` | day-ahead load, wind and solar forecasts per zone |
 | | `ntc_hourly_border` | capacity offered to the day-ahead market coupling, per border and hour |

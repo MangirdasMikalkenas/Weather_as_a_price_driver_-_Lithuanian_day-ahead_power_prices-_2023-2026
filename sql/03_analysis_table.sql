@@ -10,7 +10,7 @@ WITH base AS (
         p.price_lt AS price,
         p.price_lv, p.price_ee, p.price_fi, p.price_se4, p.price_pl,
         g.wind_mw, g.solar_mw, g.total_generation_mw,
-        l.load_mw, l.load_forecast_mw,
+        l.load_mw, l.load_forecast_mw, l.load_forecast_exante_mw,
         f.wind_forecast_mw, f.solar_forecast_mw,
         w.wind_cf_lt, w.wind_cf_lv, w.wind_cf_ee, w.wind_cf_fi, w.wind_cf_se,
         w.wind_cf_no, w.wind_cf_dk, w.wind_cf_pl, w.wind_cf_de,

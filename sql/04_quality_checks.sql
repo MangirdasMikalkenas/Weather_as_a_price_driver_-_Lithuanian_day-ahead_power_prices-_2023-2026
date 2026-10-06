@@ -63,6 +63,14 @@ FROM lt_load_hourly
 WHERE n_zero_forecasts > 0
    OR (load_forecast_raw_mw IS NOT NULL AND load_forecast_mw IS NULL);
 
+-- Hours whose load forecast the pre-auction rule removes for the price forecasts (more than 50 % away from the
+-- actual load of the same hour a week earlier). A report, not an error.
+CREATE OR REPLACE VIEW qa_load_forecast_removed_exante AS
+SELECT ts_utc, load_mw, load_forecast_raw_mw, n_zero_forecasts
+FROM lt_load_hourly
+WHERE n_zero_forecasts > 0
+   OR (load_forecast_raw_mw IS NOT NULL AND load_forecast_exante_mw IS NULL);
+
 CREATE OR REPLACE VIEW qa_summary AS
 SELECT 'missing LT price hours' AS check_name, count(*) AS problems FROM qa_missing_price_hours
 UNION ALL SELECT 'incomplete price hours',     count(*) FROM qa_incomplete_price_hours
@@ -70,4 +78,5 @@ UNION ALL SELECT 'duplicate raw rows',         count(*) FROM qa_duplicates
 UNION ALL SELECT 'prices out of range',        count(*) FROM qa_price_out_of_range
 UNION ALL SELECT 'gaps in ERA5 series',        count(*) FROM qa_weather_gaps
 UNION ALL SELECT 'hydro weeks missing a zone (excluded)', count(*) FROM qa_hydro_missing_zones
-UNION ALL SELECT 'load forecast hours cleaned (excluded)', count(*) FROM qa_load_forecast_removed;
+UNION ALL SELECT 'load forecast hours cleaned (excluded)', count(*) FROM qa_load_forecast_removed
+UNION ALL SELECT 'load forecast hours cleaned before the auction', count(*) FROM qa_load_forecast_removed_exante;

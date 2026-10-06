@@ -42,8 +42,11 @@ FROM per_series
 GROUP BY ts_utc;
 
 -- Lithuanian load: actual value and the day-ahead forecast.
--- Real day-ahead load forecasts miss by a few per cent. A forecast value of zero, or an hourly
--- forecast that misses the actual load by more than 50 %, is therefore a data error and set to NULL.
+-- Real day-ahead load forecasts miss by a few per cent, so a forecast of zero is a data error. Two cleaned versions:
+--   load_forecast_mw        also removes forecasts that miss the actual load of the same hour by more than 50 %.
+--                           It uses the outcome, so it serves the explanatory analysis (questions 1-2) only.
+--   load_forecast_exante_mw removes forecasts that differ by more than 50 % from the actual load of the same hour
+--                           a week earlier, which is known at the day-ahead auction. The forecasts (question 3) use it.
 CREATE OR REPLACE VIEW lt_load_hourly AS
 WITH hourly AS (
     SELECT
@@ -56,15 +59,20 @@ WITH hourly AS (
     GROUP BY 1
 )
 SELECT
-    ts_utc,
-    load_mw,
-    load_forecast_raw_mw,
-    n_zero_forecasts,
+    h.ts_utc,
+    h.load_mw,
+    h.load_forecast_raw_mw,
+    h.n_zero_forecasts,
     CASE
-        WHEN load_mw > 0 AND abs(load_forecast_raw_mw - load_mw) / load_mw > 0.5 THEN NULL
-        ELSE load_forecast_raw_mw
-    END AS load_forecast_mw
-FROM hourly;
+        WHEN h.load_mw > 0 AND abs(h.load_forecast_raw_mw - h.load_mw) / h.load_mw > 0.5 THEN NULL
+        ELSE h.load_forecast_raw_mw
+    END AS load_forecast_mw,
+    CASE
+        WHEN w.load_mw > 0 AND abs(h.load_forecast_raw_mw - w.load_mw) / w.load_mw > 0.5 THEN NULL
+        ELSE h.load_forecast_raw_mw
+    END AS load_forecast_exante_mw
+FROM hourly h
+LEFT JOIN hourly w ON w.ts_utc = h.ts_utc - INTERVAL 168 HOUR;
 
 -- Day-ahead wind and solar generation forecasts for Lithuania.
 CREATE OR REPLACE VIEW lt_res_forecast_hourly AS
