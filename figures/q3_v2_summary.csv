@@ -4,7 +4,7 @@ finding,estimate
 "test (Jan–Aug 2026, indicative): MAE v2 main vs v1 ensemble","23.02 vs 24.77 €/MWh (7% lower; DM p < 0.001, GW p < 0.001)"
 "test (Jan–Aug 2026, indicative): MAE relative to the weekly naive, v1 / v2",0.49 / 0.45
 "test (Jan–Aug 2026, indicative): 80% interval (QRA)","covers 74% of hours, mean width 67 €/MWh"
-"fresh (01 Sep–26 Sep 2026, clean): MAE v2 main vs v1 ensemble","32.45 vs 34.13 €/MWh (5% lower; DM p < 0.001, GW p = 0.069)"
+"fresh (01 Sep–26 Sep 2026, clean): MAE v2 main vs v1 ensemble","32.45 vs 34.13 €/MWh (5% lower; DM p < 0.001, GW p = 0.070)"
 "fresh (01 Sep–26 Sep 2026, clean): MAE relative to the weekly naive, v1 / v2",0.39 / 0.37
 "fresh (01 Sep–26 Sep 2026, clean): 80% interval (QRA)","covers 68% of hours, mean width 84 €/MWh"
 "test (Jan–Aug 2026, indicative): battery value captured (share of perfect foresight), v1 / v2",89% / 89%
