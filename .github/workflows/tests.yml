@@ -1,0 +1,20 @@
+# Runs the tests in tests/ on every push and pull request, with the package versions in requirements.txt.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install the packages the results were produced with
+        run: pip install -r requirements.txt pytest
+      - name: Run the tests
+        run: pytest -q
