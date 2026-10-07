@@ -171,7 +171,7 @@ Its lead over repeating yesterday's prices fell from 43–51% in January–April
 
 An improved version (v2) forecast September 1–26, 2026, a period no decision used, with an error of 32.5 €/MWh against 34.1 €/MWh for the main model (−5%; Diebold–Mariano p < 0.001, Giacomini–White p = 0.070; [03 §8.3](notebooks/03_forecast.ipynb)). In January–August, which had been seen before v2 was built, v2 was 7% better (23.0 against 24.8 €/MWh) and better in each of the nine months from January to September, by 3% (January) to 14% (May).
 
-Faster adaptation did most of the work. All v2 settings were chosen on October–December 2025. Lasso models trained on the last 56 and 84 days, averaged with 364- and 728-day models, cut the validation error by 7.5%; the new inputs alone made Lasso 0.7% worse. LightGBM with the change in residual load since yesterday and two recency weightings cut the validation error by 4.5%. The change in residual load since yesterday entered LightGBM's 15 most important inputs for Lithuania, the Nordic region and Germany; cross-border capacities, yesterday's forecasts and a carbon price proxy each carried under 1% of the gain.
+Faster adaptation did most of the work. All v2 settings were chosen on October–December 2025. Lasso models trained on the last 56 and 84 days, averaged with 364- and 728-day models, cut the validation error by 7.4%; the new inputs alone made Lasso 0.7% worse. LightGBM with the change in residual load since yesterday and two recency weightings cut the validation error by 4.5%. The change in residual load since yesterday entered LightGBM's 15 most important inputs for Lithuania, the Nordic region and Germany; cross-border capacities, yesterday's forecasts and a carbon price proxy each carried under 1% of the gain.
 
 Against a forecast that repeats the same hour a week earlier, v2's error ratio is 0.45 in January–August and 0.37 in September, against roughly 0.4–0.6 for the best models in a five-market benchmark study (Lago et al., 2021).
 
@@ -200,11 +200,11 @@ A 1 MW / 2 MWh battery that charged in the hours v2 predicted to be cheapest and
 | Schedule based on | Share of perfect foresight, Jan–Aug | Share, September | € per MW and year, Jan–Aug | € per MW and year, September |
 |---|---|---|---|---|
 | Actual prices (perfect foresight) | 100% | 100% | 84,300 | 84,800 |
-| v2 forecast | 89.2% | 84.4% | 75,200 | 71,600 |
+| v2 forecast | 89.2% | 84.4% | 75,200 | 71,500 |
 | Main forecast (fixed in advance) | 89.0% | 85.1% | 75,100 | 72,100 |
 | Repeating yesterday's prices | 77.6% | 60.3% | 65,400 | 51,100 |
 
-A battery earns from the order of the hours within a day, not from the price level, so v2's 7% lower error added only €113 per MW and year in January–August, and in September v2 earned €522 per MW and year less than the main model. v2 found the most expensive hour within one hour on 74% of days and the cheapest on 49%, yet all its timing errors together cost €6,100 per MW over January–August, 10.8% of the perfect-foresight profit, because a missed hour was usually replaced by one with a similar price. A simple dispatch rule in the PJM market captured a similar share of perfect-foresight value, about 85% (Sioshansi et al., 2009).
+A battery earns from the order of the hours within a day, not from the price level, so v2's 7% lower error added only €114 per MW and year in January–August, and in September v2 earned €553 per MW and year less than the main model. v2 found the most expensive hour within one hour on 74% of days and the cheapest on 49%, yet all its timing errors together cost €6,100 per MW over January–August, 10.8% of the perfect-foresight profit, because a missed hour was usually replaced by one with a similar price. A simple dispatch rule in the PJM market captured a similar share of perfect-foresight value, about 85% (Sioshansi et al., 2009).
 
 For Ignitis' 291 MW / 582 MWh of batteries at Kelmė, Mažeikiai and Kruonis, due in 2027 (Ignitis Group, 2025; ESS News, 2025), forecast-based scheduling is worth up to €2.8 million a year over repeating yesterday's prices, and v2 over the main model about €33,000 (January–August basis), though not in September. Both are upper bounds. Repeating yesterday's prices is a benchmark no trading desk uses; 291 MW is about 21% of Lithuania's average load of 1.4 GW, so the batteries will move the prices they trade at, which cut a 1 GW device's arbitrage value by about 10% in PJM (Sioshansi et al., 2009); and the test ignores grid fees, degradation, quarter-hour prices and balancing revenues. September's figures annualize 26 volatile days and are not used for these estimates.
 
@@ -248,19 +248,19 @@ Backtests of the kind banks apply to Value-at-Risk models – exact binomial and
 
 ### 14.1 The intervals are too narrow, mostly because they under-predict price spikes (H10)
 
-Across all hours, the price fell outside the 80% interval in 25.9% of hours in January–August and 32.1% in September, against a target of 20% (p < 0.001 and p = 0.002, with errors clustered by day) ([04 §2](notebooks/04_risk_backtesting.ipynb)).
+Across all hours, the price fell outside the 80% interval in 25.9% of hours in January–August and 32.3% in September, against a target of 20% (p < 0.001 and p = 0.001, with errors clustered by day) ([04 §2](notebooks/04_risk_backtesting.ipynb)).
 
 | Share of hours | January–August 2026 | September 2026 | Target |
 |---|---|---|---|
-| Price below the 10% quantile | 12.4% (p = 0.012) | 11.9% (p = 0.476) | 10% |
+| Price below the 10% quantile | 12.4% (p = 0.012) | 12.0% (p = 0.435) | 10% |
 | Price above the 90% quantile | 13.5% (p = 0.001) | 20.2% (p = 0.014) | 10% |
-| Price outside the 80% interval | 25.9% (p < 0.001) | 32.1% (p = 0.002) | 20% |
+| Price outside the 80% interval | 25.9% (p < 0.001) | 32.3% (p = 0.001) | 20% |
 
 The upper side fails more often than the lower side. The exact binomial test rejects the nominal rate of the upper tail in 9 of the 24 delivery hours in January–August and of the lower tail in 4. In September the lower tail was on target, while the upper tail missed twice as often as it should: even with only 26 days, the exact test rejects it in 9 of the 24 hours. The upper tail missed most at night, on 14–17% of days at 0–5 CET, and at 23 CET (17%). Under the Basel traffic light adapted to these levels, the whole interval is yellow in 19 of the 24 hours and red in one.
 
 The misses also cluster in time. In January–August, Christoffersen's test finds day-to-day dependence in 6 of the 24 hours for the whole interval, against the 1.2 that chance alone produces with 24 tests, though in only 2 for each tail; September's 26 days are too few for this test. The misses also come in waves of several weeks: the 14-day share of hours outside the interval moved between about 13% and 45%, with peaks in early February, in March, in late June and early July and in mid-September, consistent with the 56-day estimation window catching up with changes in volatility. H10, which expected both too-low coverage and clustered misses, is supported.
 
-The past-error benchmark covered better in January–August (23.7% of hours outside), but its misses cluster more: Christoffersen's test rejects independence in 13 of the 24 hours. In September both missed about equally often (32.9% and 32.1%). Neither method dominates: the benchmark is better calibrated on average, and QRA follows new conditions more closely. For a trader, the upper tail is the one that matters for a short position or a supplier's purchase cost, and it is the tail both methods understate.
+The past-error benchmark covered better in January–August (23.7% of hours outside), but its misses cluster more: Christoffersen's test rejects independence in 13 of the 24 hours. In September both missed about equally often (32.9% and 32.3%). Neither method dominates: the benchmark is better calibrated on average, and QRA follows new conditions more closely. For a trader, the upper tail is the one that matters for a short position or a supplier's purchase cost, and it is the tail both methods understate.
 
 ![Share of days outside each side of the interval by hour](figures/q4_interval_hits_by_hour.svg)
 
@@ -401,7 +401,7 @@ The raw data are processed with DuckDB and SQL into one hourly table: `lt_hourly
 | H7 | The capture rates of wind and solar are below 1 and fell over 2023–2026; solar's is lower and falls faster. | Partly supported | solar −8.4 percentage points a year; wind +0.25 (p = 0.74) | [6](#6-solars-capture-rate-fell-from-087-to-054-in-the-same-months-of-2023-and-2026-winds-did-not-fall) |
 | H8 | A model that uses only information available before the auction forecasts tomorrow's hourly prices more accurately than a naive benchmark (Diebold–Mariano p < 0.05). | Supported | 24.8 against 41.8 €/MWh (p < 0.001) | [8](#8-a-forecast-from-pre-auction-information-had-a-41-lower-error-than-repeating-yesterdays-prices) |
 | H9 | Replacing Lithuania's wind forecast with the wind output that actually occurred makes the price forecast more accurate. | Not supported | 28.0 against 26.9 €/MWh (+4.1%, p = 0.003) | [12](#12-knowing-the-wind-that-actually-blew-made-the-forecast-4-worse) |
-| H10 | Stated before the backtest: the 80% prediction intervals cover less than 80% of hours, and their misses cluster in time. | Supported | coverage 74% and 68% (p < 0.001 and p = 0.002); day-to-day clustering in 6 of 24 hours and waves of several weeks | [14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer) |
+| H10 | Stated before the backtest: the 80% prediction intervals cover less than 80% of hours, and their misses cluster in time. | Supported | coverage 74% and 68% (p < 0.001 and p = 0.001); day-to-day clustering in 6 of 24 hours and waves of several weeks | [14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer) |
 | H11 | Stated before the backtest: a 250-day historical-simulation risk forecast for a solar PPA overstates risk in winter and understates it in summer, and EWMA filtering reduces its failures. | Supported | winter CFaR 12 times the typical daily cash flow, with no exceptions; 28 of 40 exceptions in summer; EWMA: 24 exceptions | [14](#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer) |
 
 H9 was re-specified during the analysis: the first design used ERA5 wind as the "perfect" information, which measured wind output less accurately than the grid operators' forecasts (28.3 against 26.9 €/MWh).
