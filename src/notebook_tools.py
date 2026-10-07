@@ -16,14 +16,28 @@ import warnings
 from contextlib import contextmanager
 from pathlib import Path
 
-import pandas as pd
+import duckdb
+import matplotlib
 import numpy as np
+import pandas as pd
+
+
+def connect(db_path):
+    """Open the database read-only with one thread. With several threads DuckDB adds floating-point numbers in an
+    order that changes from run to run, so the last digits of averages and sums differ between runs; with one thread
+    every read is bitwise identical, which keeps the results and the cache keys of notebook 03 reproducible."""
+    con = duckdb.connect(str(db_path), read_only=True)
+    con.execute("SET threads TO 1")
+    return con
 
 
 def save_figure(fig, name, folder):
-    """Save a chart twice: SVG stays sharp at any width (used in results_analysis.md), PNG suits slides."""
-    for ext in ("svg", "png"):
-        fig.savefig(Path(folder) / f"{name}.{ext}", dpi=150, bbox_inches="tight")
+    """Save a chart twice: SVG stays sharp at any width (used in results_analysis.md), PNG suits slides.
+    The SVG carries no date and uses fixed element ids, so an unchanged chart gives an unchanged file and git shows
+    a figure as modified only when the chart itself changed."""
+    with matplotlib.rc_context({"svg.hashsalt": "lt-power"}):
+        fig.savefig(Path(folder) / f"{name}.svg", bbox_inches="tight", metadata={"Date": None})
+    fig.savefig(Path(folder) / f"{name}.png", dpi=150, bbox_inches="tight")
 
 
 def effect(model, name, scale=1.0):

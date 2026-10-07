@@ -1,5 +1,7 @@
 # Weather as a price driver: Lithuanian day-ahead power prices, 2023–2026
 
+[![tests](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml/badge.svg)](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml)
+
 This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
 **For a model-validation reader:** [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) rates the models and their backtests on one page, with decisions and findings by severity.
@@ -25,6 +27,7 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 - [Notebooks](#notebooks)
 - [Updating to newer data](#updating-to-newer-data)
 - [Reproducibility](#reproducibility)
+- [Tests](#tests)
 - [Troubleshooting](#troubleshooting)
 - [Data sources and attribution](#data-sources-and-attribution)
 - [License](#license)
@@ -37,12 +40,17 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 ├── results_analysis.md          # results, recommendations and interpretation (top-down)
 ├── VALIDATION_SUMMARY.md        # one-page validation summary: decisions and findings by severity
 ├── requirements.txt             # the complete tested environment (pip freeze)
-├── src/                         # data download, processing and database build
+├── pytest.ini
+├── .github/workflows/tests.yml  # runs the tests on every push
+├── src/                         # data download, processing and database build; shared notebook code
 │   ├── download_entsoe.py
 │   ├── download_era5.py
 │   ├── process_era5.py
 │   ├── download_gas.py
-│   └── build_db.py
+│   ├── build_db.py
+│   ├── notebook_tools.py        # helpers shared by the notebooks (charts, p-values, gaps, cache keys)
+│   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano, Giacomini–White
+├── tests/                       # tests of the statistics, the helpers and the SQL layer (pytest)
 ├── sql/                         # database schema, cleaning, analysis table, quality checks
 │   ├── 01_schema.sql
 │   ├── 02_clean.sql
@@ -252,7 +260,7 @@ A complete run writes 49 files to `figures/`: 21 charts in two formats and 7 CSV
 - **Periods.** Training to September 2025; validation October–December 2025 (settings only); test January–August 2026; clean test September 1–26, 2026, used for no decision.
 - **Models.** A naive benchmark (yesterday's prices; last week's on Mondays and weekends), Lasso with one model per delivery hour, LightGBM, their average (fixed in advance as the main model), and an improved version (v2) chosen on the validation period; 80% prediction intervals by quantile regression averaging; a battery schedule optimized by linear programming.
 - **Run time and cache.** The first full run takes about 1.5–2 hours. Long results are stored in `data/processed/q3_cache/` under a key that hashes the model code, the model inputs and the settings, so a change to any of them recomputes the affected results automatically and later runs take 5–8 minutes. Each stored result prints when, at which git commit and in how long it was computed, together with the warnings it raised and the Lasso safeguard counts; warnings are counted, not hidden. Deleting the folder forces a full recomputation. Setting `FAST = True` at the top runs a quick test of about 5 minutes with monthly re-training.
-- **Determinism.** Results are reproducible for the same data: `SEED = 42`, LightGBM runs with `deterministic=True`, and Lasso runs single-threaded. A full re-run reproduced every number except v2's Lasso forecasts for September, whose error moved by 0.005 €/MWh, most likely because floating-point differences can change which of two nearly equal penalties the AIC selects.
+- **Determinism.** Results are reproducible for the same data: `SEED = 42`, LightGBM runs with `deterministic=True`, Lasso runs single-threaded, and the notebooks read the database with one thread. With several threads, DuckDB adds floating-point numbers in an order that changes from run to run; the last digits of the inputs then differed between runs, which moved v2's Lasso forecasts by up to 0.01 €/MWh and changed the cache keys. One thread makes every read, and therefore every result, repeat exactly.
 
 ## Updating to newer data
 
@@ -266,6 +274,25 @@ A complete run writes 49 files to `figures/`: 21 charts in two formats and 7 CSV
 - **Data vintages.** ENTSO-E revises published data, the most recent ERA5 months are preliminary (ERA5T) and Yahoo Finance history can be adjusted, so a rebuild at a later date may differ slightly from the committed results.
 - **Fixed analysis period.** Notebooks 01–02 read `lt_hourly`, fixed to January 2023 – August 2026, so adding newer data does not change their results.
 - **Packages.** `requirements.txt` pins every installed package to the version the results were produced with.
+
+## Tests
+
+The statistical tests and helpers that the notebooks share live in `src/backtests.py` and `src/notebook_tools.py`, and `tests/` checks them against independent references:
+
+- the Basel traffic light reproduces the Basel Committee's table (0–4 exceptions green, 5–9 yellow, 10 or more red at 99% over 250 days);
+- Kupiec's test agrees with the exact binomial test in large samples and, as expected, misleads in small ones (26 days without a hit: p = 0.019 against the exact 0.104), which is why the notebooks use the exact test there;
+- Christoffersen's statistic equals a Markov likelihood ratio written out by hand, rejects about 5% of independent sequences and detects clustering;
+- the Acerbi–Szekely statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
+- the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts; the Giacomini–White statistic equals its quadratic form;
+- the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
+- the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
+
+```bash
+pip install pytest
+pytest -q
+```
+
+The tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
 
 ## Troubleshooting
 

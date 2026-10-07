@@ -1,7 +1,8 @@
-# The helpers of src/notebook_tools.py.
+"""The helpers of src/notebook_tools.py."""
 
 import warnings
 
+import duckdb
 import matplotlib
 import numpy as np
 import pandas as pd
@@ -10,7 +11,7 @@ import pytest
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from notebook_tools import count_warnings, describe_warnings, fill_gaps, fingerprint, fmt_p, git_version, p_text, save_figure
+from notebook_tools import connect, count_warnings, describe_warnings, fill_gaps, fingerprint, fmt_p, git_version, p_text, save_figure
 
 
 def test_fingerprint_is_stable_and_reacts_to_any_change_in_the_data():
@@ -60,12 +61,19 @@ def test_git_version_outside_a_repository(tmp_path):
     assert git_version(tmp_path) == "unknown"
 
 
-def test_save_figure_writes_svg_and_png(tmp_path):
-    fig, ax = plt.subplots()
-    ax.plot([0, 1], [0, 1])
-    save_figure(fig, "chart", tmp_path)
-    plt.close(fig)
-    assert (tmp_path / "chart.svg").stat().st_size > 0 and (tmp_path / "chart.png").stat().st_size > 0
+def test_save_figure_writes_svg_and_png_and_an_unchanged_chart_gives_unchanged_files(tmp_path):
+    files = []
+    for run in ("first", "second"):
+        fig, ax = plt.subplots()
+        ax.plot([0, 1], [0, 1])
+        ax.set_title("same chart")
+        folder = tmp_path / run
+        folder.mkdir()
+        save_figure(fig, "chart", folder)
+        plt.close(fig)
+        files.append(((folder / "chart.svg").read_bytes(), (folder / "chart.png").read_bytes()))
+    assert files[0][0] and files[0][1]
+    assert files[0] == files[1]
 
 
 @pytest.mark.parametrize("p, sentence, cell", [(0.0004, "p < 0.001", "<0.001"), (0.0412, "p = 0.041", "0.041"),
@@ -74,3 +82,19 @@ def test_p_values_are_never_shown_as_zero(p, sentence, cell):
     if sentence is not None:
         assert fmt_p(p) == sentence
     assert p_text(p) == cell
+
+
+def test_connect_reads_with_one_thread_so_aggregates_repeat_bitwise(tmp_path):
+    rng = np.random.default_rng(0)
+    data = pd.DataFrame({"g": rng.integers(0, 1000, 200_000), "v": rng.normal(1000, 300, 200_000)})
+    path = tmp_path / "test.duckdb"
+    con = duckdb.connect(str(path))
+    con.execute("CREATE TABLE t AS SELECT * FROM data")
+    con.close()
+    sums = []
+    for _ in range(2):
+        con = connect(path)
+        assert con.sql("SELECT current_setting('threads')").fetchone()[0] == 1
+        sums.append(con.sql("SELECT g, sum(v) AS s FROM t GROUP BY g ORDER BY g").df()["s"].to_numpy())
+        con.close()
+    assert np.array_equal(sums[0], sums[1])

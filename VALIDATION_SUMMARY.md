@@ -23,9 +23,10 @@ This repository builds three kinds of models on public Lithuanian power-market d
 - Diebold–Mariano and Giacomini–White tests, and automatic checks that the inputs use only information available before the auction.
 - Exact binomial, Kupiec and Christoffersen tests, the Basel traffic light and the Acerbi–Szekely test, with a sensitivity analysis and a stress scenario.
 - Placebo, instrumental-variable, out-of-sample and leave-one-year-out checks of the regressions, and data-quality views in SQL.
+- Unit tests of every statistical test against an independent reference, of the cache keys and of the SQL layer, run on every push (GitHub Actions).
 
 ## Scope and open issues
 
 - The PPA measure is a cash-flow-at-risk on realized settlement, not a market-risk VaR: the PPA is not revalued off a forward curve, there is no risk-factor mapping, and no bank product (bonds, swaps, options) is modeled, so PFE, IRRBB and P&L attribution are out of scope.
-- Fixed after review: the forecast inputs no longer use a load forecast cleaned with the actual load of the same hour; the cleaning now compares with the load of a week earlier, known at the auction, and the forecasts were recomputed. Stored forecasts are keyed to the code and data that produced them and record their date, git commit and warnings, which are counted rather than hidden.
-- Open: 2–6% of the penalty points on the Lasso paths stopped at the iteration limit before converging, and their effect on the forecasts has not yet been measured; the order of decisions is documented in the notebooks but not time-stamped by a third party.
+- Fixed after review: the forecast inputs no longer use a load forecast cleaned with the actual load of the same hour; the cleaning now compares with the load of a week earlier, known at the auction, and the forecasts were recomputed. Stored forecasts are keyed to the code and data that produced them and record their date, git commit and warnings, which are counted rather than hidden. Re-fitting 12 days with ten times more Lasso iterations changed the forecasts by at most 0.18 €/MWh, so the convergence warnings do not affect the results; and the database is read with a single thread, so that inputs and cache keys repeat exactly.
+- Open: the order of decisions is documented in the notebooks but not time-stamped by a third party.
