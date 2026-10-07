@@ -1,0 +1,10 @@
+finding,estimate
+"VaR 99%, risk model","42 exceptions in 1978 days (2.1% against 1%); binomial p = <0.001, Christoffersen p = 0.070; zones 2019: yellow, 2020: red, 2021: green, 2022: yellow, 2023: green, 2024: green, 2025: yellow, 2026: green"
+VaR 99% with the front-office risk factors,32 exceptions
+Expected Shortfall 97.5%,"Acerbi–Szekely Z2 = -0.91, p = <0.001"
+Stressed VaR (2022) against VaR,median ratio 1.19
+10-day VaR: overlapping changes against the square-root rule,median ratio 0.87
+"P&L attribution, risk model against front office","green: 26, amber: 2 of 28 quarters; R² of the unexplained P&L on the spread change 0.97"
+"IRRBB, worst ΔEVE",parallel up: -21.2 € million (-21.2% of Tier 1)
+"IRRBB, worst ΔEVE by hedge size","0: -50.8%, 250: -21.2%, 500: -13.3%"
+"IRRBB, ΔNII","parallel up +3.2, parallel down -3.2 € million"
