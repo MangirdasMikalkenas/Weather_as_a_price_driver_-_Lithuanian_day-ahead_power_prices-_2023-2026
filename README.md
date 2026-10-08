@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml/badge.svg)](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml)
 
-This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
+This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models, and applies the same toolkit to a small bank portfolio (notebook 05) ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
 **For a model-validation reader:** [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) rates the models and their backtests on one page, with decisions and findings by severity.
 
@@ -47,8 +47,11 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 │   ├── download_era5.py
 │   ├── process_era5.py
 │   ├── download_gas.py
+│   ├── download_ecb.py
 │   ├── build_db.py
 │   ├── notebook_tools.py        # helpers shared by the notebooks (charts, p-values, gaps, cache keys)
+│   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks
+│   ├── exposure.py              # Hull–White exposure simulation, PFE, effective EPE, SA-CCR
 │   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano, Giacomini–White
 ├── tests/                       # tests of the statistics, the helpers and the SQL layer (pytest)
 ├── sql/                         # database schema, cleaning, analysis table, quality checks
@@ -61,7 +64,8 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 │   ├── 01_price_drivers.ipynb   # question 1: what drives the price (H1–H5)
 │   ├── 02_wind_value.ipynb      # question 2: what wind and solar are worth (H6–H7)
 │   ├── 03_forecast.ipynb        # question 3: forecasting tomorrow's prices (H8–H9)
-│   └── 04_risk_backtesting.ipynb # backtesting the uncertainty: intervals and a solar PPA cash-flow-at-risk (H10–H11)
+│   ├── 04_risk_backtesting.ipynb # backtesting the uncertainty: intervals and a solar PPA cash-flow-at-risk (H10–H11)
+│   └── 05_bank_portfolio.ipynb   # the same toolkit on a small bank portfolio: VaR, P&L attribution, IRRBB, PFE
 ├── figures/                     # charts (SVG and PNG) and summary tables (CSV) written by the notebooks
 └── data/                        # not committed: downloads, processed ERA5, database, forecast cache
     ├── raw/entsoe/              # one CSV per dataset, zone and month
@@ -89,6 +93,7 @@ python src/download_entsoe.py        # ENTSO-E prices, generation, load, forecas
 python src/download_era5.py          # ERA5 weather grid, one request per month
 python src/process_era5.py           # ERA5 grid -> hourly indices per country
 python src/download_gas.py           # TTF gas and the carbon price proxy
+python src/download_ecb.py           # ECB yield curves and EUR/USD, for notebook 05
 python src/build_db.py               # rebuilds data/lt_power.duckdb and runs the quality checks
 
 # run notebooks/01–04 in order with "Run All" in VS Code (Jupyter extension) or JupyterLab
@@ -100,11 +105,13 @@ python src/build_db.py               # rebuilds data/lt_power.duckdb and runs th
 | `download_era5.py` | several hours, depending on the Copernicus request queue |
 | `process_era5.py` | a few minutes |
 | `download_gas.py` | seconds |
+| `download_ecb.py` | seconds |
 | `build_db.py` | under a minute |
 | Notebook 01 | a few minutes |
 | Notebook 02 | under a minute |
 | Notebook 03, first run | about 1.5–2 hours; later runs 5–8 minutes from the stored results |
 | Notebook 04 | under a minute (it reads the stored results of notebook 03) |
+| Notebook 05 | about a minute |
 
 ## Setup
 
@@ -251,8 +258,9 @@ The notebooks contain code and section titles only; the interpretation of every 
 | `02_wind_value.ipynb` | What are wind and solar output worth, and how much wind output is held back at negative prices? | H6–H7 | `lt_hourly`, `capture_rates_monthly` | 5 charts, `q2_summary.csv` |
 | `03_forecast.ipynb` | How accurately can tomorrow's hourly prices be forecast, and what is better information worth? | H8–H9 | `lt_hourly_all` and the neighbors' forecasts, capacities and carbon proxy | 8 charts, `q3_summary.csv`, `q3_followup.csv`, `q3_v2_summary.csv` |
 | `04_risk_backtesting.ipynb` | How reliable are the uncertainty estimates: the forecast's 80% intervals and the cash-flow-at-risk of a solar PPA? | H10–H11 | `lt_hourly_all` and the stored intervals of notebook 03 | 3 charts, `q4_summary.csv` |
+| `05_bank_portfolio.ipynb` | Does the same toolkit catch the weaknesses of a bank's market-risk, IRRBB and counterparty-exposure models? | – | ECB yield curves and EUR/USD | 4 charts, `q5_summary.csv` |
 
-A complete run writes 49 files to `figures/`: 21 charts in two formats and 7 CSV tables.
+A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV tables.
 
 **Notebook 03 in more detail.**
 
@@ -285,6 +293,8 @@ The statistical tests and helpers that the notebooks share live in `src/backtest
 - the Acerbi–Szekely statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
 - the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts; the Giacomini–White statistic equals its quadratic form;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
+- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and lower bound follow the Basel and EBA formulas;
+- the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, and SA-CCR matches a calculation by hand;
 - the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
 
 ```bash
@@ -313,6 +323,7 @@ The tests need no downloaded data and run in seconds. GitHub Actions runs them o
 - **ENTSO-E Transparency Platform** (https://transparency.entsoe.eu/): day-ahead prices, generation, load, day-ahead forecasts, hydro reservoir levels and offered capacities. The raw data are not included in this repository; download them with your own token under the platform's terms of use.
 - **ERA5 hourly data on single levels** (Hersbach et al., 2023; https://doi.org/10.24381/cds.adbb2d47). *Contains modified Copernicus Climate Change Service information 2026. Neither the European Commission nor ECMWF is responsible for any use that may be made of the Copernicus information or data it contains.*
 - **Natural Earth** country borders (public domain), accessed through `regionmask`.
+- **ECB Data Portal** (https://data.ecb.europa.eu/): euro-area yield curves (AAA and all central governments) and the EUR/USD reference rate, for notebook 05. Source: ECB statistics, reused with acknowledgement of the source.
 - **Yahoo Finance**, tickers `TTF=F` and `KRBN`, for personal, non-commercial use; the data are not redistributed.
 
 The literature and market sources behind the analysis are listed in [Appendix C of results_analysis.md](results_analysis.md#appendix-c-references).
