@@ -4,7 +4,7 @@ Wind across the Baltic Sea region moves the Lithuanian day-ahead price more than
 
 These implications rest on six findings for January 2023 – September 2026. A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and Nordic wind moved the price about as much as Baltic wind (−7.4 against −7.6 €/MWh per +10 percentage points, with 95% confidence intervals that overlap almost entirely). The increase in the wind effect in 2025 coincided with the Estlink 2 outage and is not explained by the turbines added. Solar's capture rate (output-weighted price ÷ average price) fell by 8.4 percentage points a year, and wind farms held back 18% of their output in negative-price hours, which represented 0.8% of their 2025 production. A forecast built on information available before the auction had a 41% lower error than repeating yesterday's prices (mean absolute error 24.8 against 41.8 €/MWh), and replacing its wind forecast with the wind that actually blew made it 4% worse. Backtests of the kind banks apply to Value-at-Risk show that the forecast's 80% intervals under-predict price spikes and that a cash-flow-at-risk for a solar PPA based on 250 days of history fails in summer.
 
-The analysis joins 32,135 hourly prices with public weather, grid and fuel data in four notebooks – price drivers ([01](notebooks/01_price_drivers.ipynb)), the value of wind and solar ([02](notebooks/02_wind_value.ipynb)), forecasting ([03](notebooks/03_forecast.ipynb)) and backtesting the uncertainty ([04](notebooks/04_risk_backtesting.ipynb)) – with methods in [Appendix A](#appendix-a-data-and-methods). The wind effect holds in five additional checks on the same data; the forecast beat repeating yesterday's prices in every month from January to September 2026; and the improved forecast's 5% gain on the 26 days of September 2026 that no decision used passes the Diebold–Mariano test (p < 0.001) but not the stricter Giacomini–White test (p = 0.070). No adjustment was made for testing eleven hypotheses and many robustness variants, so results with p-values between 0.04 and 0.07 are tentative. The main caveats are listed in [section 15](#15-limits).
+The analysis joins 32,135 hourly prices with public weather, grid and fuel data in four notebooks – price drivers ([01](notebooks/01_price_drivers.ipynb)), the value of wind and solar ([02](notebooks/02_wind_value.ipynb)), forecasting ([03](notebooks/03_forecast.ipynb)) and backtesting the uncertainty ([04](notebooks/04_risk_backtesting.ipynb)), plus the same toolkit on a small bank portfolio in [Appendix D](#appendix-d-the-same-validation-toolkit-on-a-small-bank-portfolio) ([05](notebooks/05_bank_portfolio.ipynb)) – with methods in [Appendix A](#appendix-a-data-and-methods). The wind effect holds in five additional checks on the same data; the forecast beat repeating yesterday's prices in every month from January to September 2026; and the improved forecast's 5% gain on the 26 days of September 2026 that no decision used passes the Diebold–Mariano test (p < 0.001) but not the stricter Giacomini–White test (p = 0.070). No adjustment was made for testing eleven hypotheses and many robustness variants, so results with p-values between 0.04 and 0.07 are tentative. The main caveats are listed in [section 15](#15-limits).
 
 ---
 
@@ -406,6 +406,67 @@ The raw data are processed with DuckDB and SQL into one hourly table: `lt_hourly
 
 H9 was re-specified during the analysis: the first design used ERA5 wind as the "perfect" information, which measured wind output less accurately than the grid operators' forecasts (28.3 against 26.9 €/MWh).
 
+## Appendix D. The same validation toolkit on a small bank portfolio
+
+Applied to a small bank portfolio, the toolkit of section 14 finds what a market-risk validation would look for ([05](notebooks/05_bank_portfolio.ipynb)). A historical-simulation VaR that maps a euro-area government bond to the AAA curve fails its backtest – 42 exceptions at 99% in 1,978 days against about 20 expected (exact binomial p < 0.001), red in 2020 – and the P&L it misses is almost entirely the sovereign spread it leaves out. The same portfolio's P&L attribution test is green in 26 of 28 quarters, so the proxy passes the attribution test while failing the backtest. A Hull–White model of counterparty exposure passes its martingale tests but, calibrated to the 1-year rate, understates the volatility of the rates that drive the swap. The settings were fixed before the results were computed.
+
+The portfolio holds a 10-year euro-area government bond (€10 million), a 5-year interest rate swap paying fixed (€20 million) and a 6-month forward receiving $10 million against euros, with terms set at par on December 31, 2018, and a constant maturity. The front office values the bond on the curve of all euro-area governments and the swap and the forward on the AAA curve, the closest the public data come to a swap curve; the risk model uses five nodes of the AAA curve and the exchange rate, so it maps the bond to a proxy without the sovereign spread. Both curves come from the ECB (ECB, 2026). The US dollar rate is a constant 4%: the data have no US dollar curve, so that risk factor is left out on purpose.
+
+| Test | Result |
+|---|---|
+| 1-day VaR 99%, risk model | 42 exceptions in 1,978 days (2.1%; exact binomial p < 0.001); Basel zone red in 2020, yellow in 2019, 2022 and 2025 |
+| 1-day VaR 99%, front-office risk factors | 32 exceptions (1.6%; p = 0.009) |
+| Expected Shortfall 97.5% | Acerbi–Szekely Z2 = −0.91 (p < 0.001): the losses beyond VaR are understated |
+| Unexplained P&L (front office minus risk model) | R² = 0.97 on the daily change in the 10-year sovereign spread |
+| P&L attribution, 250-day windows | green in 26 of 28 quarters, amber in the two windows that end in December 2019 and March 2020 (Spearman 0.76 and 0.79) |
+| Stressed VaR, 2022 window | 1.19 times VaR at the median, but below VaR in 2023 (€135,000 against €150,000 on average) |
+| 10-day VaR, overlapping changes against √10 × 1-day VaR | median ratio 0.87, range 0.47–1.23 |
+
+The exceptions cluster in 2019, in March 2020, in late 2022 and in March–April 2025, when rates or spreads jumped and a 250-day window reacted late; with the bond on its own curve the exceptions fall from 42 to 32 but still exceed the 20 expected. The attribution test passes because the spread moves little on most days; the backtest fails because it moves most on the days that matter. The 2022 window was not the most stressful period for this portfolio in 2023, and the square-root-of-time rule overstates the 10-day VaR in most periods but understated it by up to 23%.
+
+![Bank portfolio daily P&L, VaR and stressed VaR](figures/q5_var_backtest.svg)
+
+*Figure 18. Bank portfolio: daily P&L, VaR and stressed VaR.* 42 losses beyond VaR, clustered in 2019–2020, 2022 and 2025 ([05 §3](notebooks/05_bank_portfolio.ipynb)).
+
+![P&L attribution of the risk model against the front office](figures/q5_pla.svg)
+
+*Figure 19. P&L attribution, 250-day windows.* Green in 26 of 28 quarters, amber at the end of 2019 and in early 2020 ([05 §5](notebooks/05_bank_portfolio.ipynb)).
+
+The IRRBB part applies the six supervisory shocks of the Basel Committee (2016), with the post-shock lower bound of the EBA guidelines (EBA, 2022), to a stylised banking book: €500 million of 15-year fixed-rate mortgages, €300 million of floating-rate loans and €150 million of 5-year government bonds, funded by €500 million of non-maturity deposits (€300 million core, spread over five years), €250 million of 1-year term deposits, €100 million of 5-year senior bonds and €100 million of Tier 1 capital, with a €250 million banking-book swap that pays fixed. On the AAA curve of September 30, 2026, the economic value of equity falls by €21.2 million under the parallel up shock and by €16.1 million under the steepener, 21% and 16% of Tier 1 – above the 15% outlier threshold. Without the swap the decline would be 51% of Tier 1, and a €500 million swap brings it to 13%. Net interest income changes by ±€3.2 million under ±200 basis points, within the 5% threshold.
+
+![IRRBB change in EVE under the six supervisory shocks](figures/q5_irrbb_eve.svg)
+
+*Figure 20. IRRBB: change in the economic value of equity under the six supervisory shocks.* Parallel up and the steepener exceed the outlier threshold ([05 §6](notebooks/05_bank_portfolio.ipynb)).
+
+The counterparty part simulates the swap and the forward, traded at par on September 30, 2026 with one counterparty under a netting agreement, on 5,000 paths at steps of about 10 business days ([05 §7](notebooks/05_bank_portfolio.ipynb)). Euro rates follow a one-factor Hull–White model fitted to that day's AAA curve (Hull & White, 1990), with a mean reversion of 0.03 and a volatility of 50 basis points a year taken from the 1-year rate; the euro value of a dollar is lognormal, with a volatility of 7.1% and a correlation of +0.14 with the rate, both from the last two years. The model passes its martingale tests: discounted bond prices and the discounted dollar match today's values within 1.4 standard errors.
+
+| Exposure | Peak PFE 97.5% | Effective EPE | 1.4 × effective EPE | SA-CCR |
+|---|---|---|---|---|
+| Swap alone | €951,000 at 2 years | €88,000 | €123,000 | – |
+| FX forward alone | €838,000 at 5.5 months | €108,000 | €151,000 | – |
+| Netting set, no margin | €999,000 at 5.5 months | €168,000 | €235,000 | €968,000 |
+| Netting set, variation margin | €305,000 at 2 months | €60,000 | €84,000 | €334,000 |
+
+Netting saves 13% of the two trades' standalone exposure over the first year, and variation margin with a 10-day margin period of risk cuts the effective EPE by 64%. SA-CCR, the Basel Committee's standardised approach (2014), gives an exposure at default 4.1 times the internal model's without margin and 4.0 times with it, as expected for a small netting set close to par. Two settings drive the result. Calibrated to the 1-year rate, the model gives the 2–10-year rates a volatility of 43–48 basis points a year, against 58–63 observed, and a 25% higher volatility raises the swap's peak PFE by 23%. The correlation matters most for the netted exposure: at −0.5 instead of +0.14 the effective EPE falls by 29%, and at +0.5 it rises by 13%.
+
+![Counterparty exposure of the swap and the FX forward](figures/q5_pfe.svg)
+
+*Figure 21. Counterparty exposure of the swap and the FX forward.* Variation margin cuts the peak PFE from about €1.0 million to €0.3 million ([05 §7](notebooks/05_bank_portfolio.ipynb)).
+
+| Finding | Severity | Evidence | Recommendation |
+|---|---|---|---|
+| The risk model maps the bond to a proxy curve without the sovereign spread. | High | 42 exceptions at 99% (p < 0.001); unexplained P&L R² = 0.97 on spread changes | Add the spread, or the bond's own curve, as a risk factor; with it, the exceptions fall to 32. |
+| Expected Shortfall is understated. | High | Z2 = −0.91, p < 0.001 | Re-test after the risk factor is added; consider volatility-scaled scenarios, as in section 14. |
+| The 250-day window reacts late to regime changes, even with the right risk factors. | Medium | 32 exceptions with the front-office risk factors (p = 0.009), clustered in 2020, 2022 and 2025 | Volatility-scaled (filtered) historical simulation, re-tested on new data. |
+| The stress window is fixed rather than chosen for the current portfolio. | Medium | Stressed VaR below VaR in 2023 | Choose the 12-month window that is most stressful for the current portfolio and review it regularly. |
+| The square-root-of-time rule is not conservative at all times. | Medium | Overlapping 10-day VaR up to 1.23 times √10 × 1-day VaR | Use overlapping 10-day changes, or support the scaling with a test. |
+| The exposure model's volatility comes from the 1-year rate, below that of the rates that drive the swap. | Medium | Model 43–48 bp a year against 58–63 bp observed for 2–10 years; 25% more volatility raises the swap's peak PFE by 23% | Calibrate to the 2–5-year rates or to swaption prices, or use a two-factor model. |
+| The netted exposure depends strongly on one estimated correlation. | Medium | Effective EPE −29% at a correlation of −0.5 and +13% at +0.5, against +0.14 estimated | Stress the correlation when setting limits and review the estimate regularly. |
+| The US dollar rate is not a risk factor. | Low | A constant 4% | Add a US dollar curve before the forward book grows. |
+| The internal model's EAD is about a quarter of SA-CCR's. | Low | SA-CCR 4.1 times without margin, 4.0 times with it | Expected for a small netting set near par; keep SA-CCR as a benchmark in ongoing monitoring. |
+
+These are results for a stylised portfolio with simplifying assumptions: the positions keep a constant maturity, so the P&L has no carry; the AAA curve stands in for a swap curve; the ECB curves are fitted Svensson curves, smoother than market quotes; the banking book ignores prepayments and uses illustrative deposit assumptions; and the exposure model has one rate factor and assumes that both parties keep paying during the margin period of risk. The notebook demonstrates the method; the numbers do not describe any bank.
+
 ## Appendix C. References
 
 ### Academic literature
@@ -417,6 +478,7 @@ H9 was re-specified during the analysis: the first design used ERA5 wind as the 
 - Giacomini, R., & White, H. (2006). Tests of conditional predictive ability. *Econometrica*, 74(6), 1545–1578.
 - Hersbach, H., et al. (2020). The ERA5 global reanalysis. *Quarterly Journal of the Royal Meteorological Society*, 146(730), 1999–2049. https://doi.org/10.1002/qj.3803
 - Hirth, L. (2013). The market value of variable renewables: The effect of solar wind power variability on their relative price. *Energy Economics*, 38, 218–236. https://doi.org/10.1016/j.eneco.2013.02.004
+- Hull, J., & White, A. (1990). Pricing interest-rate-derivative securities. *Review of Financial Studies*, 3(4), 573–592.
 - Hull, J., & White, A. (1998). Incorporating volatility updating into the historical simulation method for value-at-risk. *Journal of Risk*, 1(1), 5–19.
 - Kath, C., & Ziel, F. (2021). Conformal prediction interval estimation and applications to day-ahead and intraday power markets. *International Journal of Forecasting*, 37(2), 777–799. https://doi.org/10.1016/j.ijforecast.2020.09.006
 - Ke, G., Meng, Q., Finley, T., Wang, T., Chen, W., Ma, W., Ye, Q., & Liu, T.-Y. (2017). LightGBM: A highly efficient gradient boosting decision tree. *Advances in Neural Information Processing Systems*, 30.
@@ -441,7 +503,11 @@ H9 was re-specified during the analysis: the first design used ERA5 wind as the 
 
 - AST (2025). *Baltic balancing capacity market launched on February 4, 2025.* https://www.ast.lv/en/node/86619
 - Basel Committee on Banking Supervision (1996). *Supervisory framework for the use of "backtesting" in conjunction with the internal models approach to market risk capital requirements.* Bank for International Settlements.
+- Basel Committee on Banking Supervision (2014). *The standardised approach for measuring counterparty credit risk exposures.* Bank for International Settlements.
+- Basel Committee on Banking Supervision (2016). *Interest rate risk in the banking book.* Bank for International Settlements.
 - Basel Committee on Banking Supervision (2019). *Minimum capital requirements for market risk.* Bank for International Settlements.
+- EBA (2022). *Guidelines on the management of interest rate risk and credit spread risk arising from non-trading book activities* (EBA/GL/2022/14). European Banking Authority.
+- ECB (2026). *Euro area yield curves* and *Euro foreign exchange reference rates*. ECB Data Portal, https://data.ecb.europa.eu/.
 - Elering (2025). *EstLink 2 back on the market.* https://elering.ee/en/node/3909
 - ESS News (2025). *Lithuania's Ignitis Group to add 582 MWh of battery storage projects.* https://www.ess-news.com/?p=5724
 - European Commission (2013). Commission Regulation (EU) No 543/2013 on submission and publication of data in electricity markets. *Official Journal of the European Union*, L 163, 1–12. https://eur-lex.europa.eu/eli/reg/2013/543/oj

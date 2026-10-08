@@ -8,3 +8,7 @@ Stressed VaR (2022) against VaR,median ratio 1.19
 "IRRBB, worst ΔEVE",parallel up: -21.2 € million (-21.2% of Tier 1)
 "IRRBB, worst ΔEVE by hedge size","0: -50.8%, 250: -21.2%, 500: -13.3%"
 "IRRBB, ΔNII","parallel up +3.2, parallel down -3.2 € million"
+"PFE, netting set without margin","peak PFE 998,642 €; effective EPE 167,562 €; netting benefit 13%"
+"PFE, with variation margin","effective EPE 60,175 €"
+SA-CCR against the internal model,"4.13 times without margin, 3.96 times with margin"
+Martingale tests,largest |z| = 1.38
