@@ -1,10 +1,13 @@
-# The pricing and IRRBB functions of src/bank_products.py, checked against closed-form results.
+"""The pricing and IRRBB functions of src/bank_products.py, checked against closed-form results."""
+
+from functools import partial
 
 import numpy as np
 import pytest
 
-from bank_products import (bond_value, discount_factors, eba_lower_bound, fx_forward_strike, fx_forward_value,
-                           interpolation_matrix, par_rate, payer_swap_value, shocked_rates, supervisory_shocks)
+from bank_products import (banking_book_cash_flows, bond_value, discount_factors, eba_lower_bound, fx_forward_strike,
+                           fx_forward_value, interpolation_matrix, nii_change, par_rate, payer_swap_value,
+                           present_value, shocked_rates, supervisory_shocks)
 
 TENORS = np.array([0.25, 0.5, 1, 2, 3, 5, 7, 10, 15, 20, 30])
 FLAT = np.full(len(TENORS), 0.03)
@@ -71,3 +74,46 @@ def test_eba_lower_bound_and_its_use():
     assert down == pytest.approx([-0.02, -0.012])          # observed rate kept; the 10-year rate stops at the bound
     small = shocked_rates(base, times, np.array([-0.001, -0.001]))
     assert small == pytest.approx([-0.02, 0.009])          # below the bound a rate cannot fall further; above it, it can
+
+
+def flat(rate):
+    return lambda t: np.full(np.shape(t), rate)
+
+
+@pytest.mark.parametrize("item", [dict(amount=500.0, rate=0.035, years=15, kind="annuity"),
+                                  dict(amount=150.0, rate=0.025, years=5, kind="bullet"),
+                                  dict(amount=300.0, rate=0.005, years=5, kind="spread")])
+def test_an_item_discounted_at_its_own_rate_is_worth_its_amount(item):
+    # annual compounding at r is continuous compounding at ln(1 + r)
+    assert present_value({"item": item}, flat(np.log1p(item["rate"]))) == pytest.approx(item["amount"])
+
+
+def test_short_bullets_pay_once_and_overnight_items_are_repaid_at_once():
+    times, flows = banking_book_cash_flows(dict(amount=300.0, rate=0.04, years=0.25, kind="bullet"))
+    assert times == pytest.approx([0.25]) and flows == pytest.approx([303.0])
+    overnight = {"deposits": dict(amount=200.0, rate=0.0, years=0.0, kind="bullet")}
+    assert present_value(overnight, flat(0.05)) == pytest.approx(200.0)
+
+
+BOOK_ASSETS = {"fixed-rate mortgages": dict(amount=500.0, rate=0.035, years=15, kind="annuity"),
+               "floating-rate loans": dict(amount=300.0, rate=0.040, years=0.25, kind="bullet"),
+               "government bonds": dict(amount=150.0, rate=0.025, years=5, kind="bullet")}
+BOOK_LIABILITIES = {"deposits, non-core": dict(amount=200.0, rate=0.000, years=0.0, kind="bullet", non_maturity=True),
+                    "deposits, core": dict(amount=300.0, rate=0.005, years=5, kind="spread", non_maturity=True),
+                    "term deposits": dict(amount=250.0, rate=0.030, years=1, kind="bullet"),
+                    "senior bonds issued": dict(amount=100.0, rate=0.032, years=5, kind="bullet")}
+
+
+def test_nii_change_by_hand_and_the_deposit_floor_makes_it_asymmetric():
+    nii = partial(nii_change, BOOK_ASSETS, BOOK_LIABILITIES, pass_through=0.5, hedge_notional=250.0)
+    # +200 bp: hedge 250 x 2% x 0.75, floating loans 300 x 2% x 0.75, deposits (200 + 300) x 1% = 3.75 + 4.5 - 5.0
+    assert nii(0.02) == pytest.approx(3.25)
+    assert nii(-0.02, deposit_floor=None) == pytest.approx(-3.25)
+    # -200 bp with a 0% floor: non-core deposits already pay 0%, core deposits fall from 0.5% to 0% instead of -0.5%
+    assert nii(-0.02) == pytest.approx(-3.75 - 4.5 + 300 * 0.005)
+
+
+def test_the_deposit_floor_never_raises_a_rate_already_below_it():
+    negative = {"deposits": dict(amount=100.0, rate=-0.005, years=0.0, kind="bullet", non_maturity=True)}
+    assert nii_change({}, negative, -0.02, pass_through=0.5) == pytest.approx(0.0)    # stays at -0.5%
+    assert nii_change({}, negative, 0.02, pass_through=0.5) == pytest.approx(-1.0)    # -0.5% -> +0.5%

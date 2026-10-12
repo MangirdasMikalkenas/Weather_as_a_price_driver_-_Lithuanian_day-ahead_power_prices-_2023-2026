@@ -9,7 +9,9 @@ Output, in data/raw/ecb/:
     eurusd.csv       date, usd_per_eur            ECB euro foreign exchange reference rate (US dollars per euro)
 
 Notebook 05 uses them for a small bank portfolio (a bond, an interest rate swap and an FX forward) and for the
-supervisory interest rate shocks of IRRBB. ECB statistics may be reused with the source acknowledged.
+supervisory interest rate shocks of IRRBB. The curves start on 6 September 2004; the whole history is downloaded so
+that the stressed VaR can choose its stress period from 2008, 2011-12 and 2022 alike. ECB statistics may be reused
+with the source acknowledged.
 
 Run from the repository root:  python src/download_ecb.py
 """
@@ -21,7 +23,7 @@ import pandas as pd
 import requests
 
 OUT_DIR = Path("data/raw/ecb")
-START, END = "2015-01-01", "2026-09-30"
+START, END = "2004-09-01", "2026-09-30"      # from the first day of the ECB curves
 API = "https://data-api.ecb.europa.eu/service/data"
 CURVES = {"AAA": "G_N_A", "all": "G_N_C"}
 TENORS = {"3M": 0.25, "6M": 0.5, "1Y": 1, "2Y": 2, "3Y": 3, "5Y": 5, "7Y": 7, "10Y": 10, "15Y": 15, "20Y": 20, "30Y": 30}
@@ -30,7 +32,7 @@ TENORS = {"3M": 0.25, "6M": 0.5, "1Y": 1, "2Y": 2, "3Y": 3, "5Y": 5, "7Y": 7, "1
 def fetch(flow, key):
     """One ECB series request in SDMX-CSV; the KEY column identifies each series."""
     response = requests.get(f"{API}/{flow}/{key}", params={"startPeriod": START, "endPeriod": END, "format": "csvdata"},
-                            timeout=120)
+                            timeout=300)     # 22 years of 11 tenors is a large reply
     response.raise_for_status()
     return pd.read_csv(io.StringIO(response.text))
 

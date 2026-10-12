@@ -11,7 +11,7 @@ This project measures how the weather moves the Lithuanian day-ahead electricity
 - A typical windy hour was 17 €/MWh (19%) cheaper than a typical calm one (−7.6 €/MWh per +10 percentage points of Baltic wind capacity factor), and Nordic wind moved the price about as much as Baltic wind (−7.4 against −7.6 €/MWh, with overlapping confidence intervals).
 - While the Estlink 2 cable was out (December 25, 2024 – June 20, 2025), +10 percentage points of wind were associated with an extra price reduction of 5.1–8.1 €/MWh, depending on the specification, in a single 177-day event; the turbines added in 2024–2025 did not change the effect.
 - Solar's capture rate fell from 0.87 to 0.54 between January–August 2023 and January–August 2026, while wind's showed no downward trend; wind farms held back 18% of their output in negative-price hours, 0.8% of their 2025 production.
-- The forecast's mean absolute error was 24.8 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 5% better on September 2026 (Diebold–Mariano p < 0.001, Giacomini–White p = 0.070), and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
+- The forecast's mean absolute error was 24.8 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 5% better on the 26 days of September 2026, a borderline result (small-sample Diebold–Mariano p = 0.050, Giacomini–White p = 0.070), and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
 - Replacing the wind forecast with the wind that actually blew made the day-ahead forecast 4% worse (p = 0.003), consistent with the auction pricing expectations rather than outcomes; this tests perfect hindsight, not a better forecast made before the auction.
 - In backtests with exact binomial, Christoffersen, Basel traffic-light and Acerbi–Szekely tests, the forecast's 80% intervals under-predicted price spikes (the price exceeded the upper bound in 13.5% of hours against 10%), and a 99% cash-flow-at-risk for a solar PPA based on 250 days of history failed in summer (40 exceptions in 974 days against about 10); volatility scaling cut the exceptions to 24 and a full year of history to 14.
 
@@ -30,6 +30,7 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 - [Tests](#tests)
 - [Troubleshooting](#troubleshooting)
 - [Data sources and attribution](#data-sources-and-attribution)
+- [How this project was made](#how-this-project-was-made)
 - [License](#license)
 
 ## Repository structure
@@ -50,9 +51,10 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 │   ├── download_ecb.py
 │   ├── build_db.py
 │   ├── notebook_tools.py        # helpers shared by the notebooks (charts, p-values, gaps, cache keys)
-│   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks
+│   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks, banking-book cash flows, NII
 │   ├── exposure.py              # Hull–White exposure simulation, PFE, effective EPE, SA-CCR
-│   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano, Giacomini–White
+│   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano (also for short
+│                                #   samples), Giacomini–White, VaR and ES, P&L attribution zones
 ├── tests/                       # tests of the statistics, the helpers and the SQL layer (pytest)
 ├── sql/                         # database schema, cleaning, analysis table, quality checks
 │   ├── 01_schema.sql
@@ -73,6 +75,7 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
     ├── raw/gas/                 # TTF gas and the carbon price proxy
     ├── processed/era5_regions.csv
     ├── processed/q3_cache/      # stored forecasts of notebook 03, keyed by the code and data that produced them
+    ├── processed/q3_intervals.pkl # the 80% intervals handed from notebook 03 to notebook 04, with their provenance
     └── lt_power.duckdb          # rebuilt by src/build_db.py
 ```
 
@@ -93,10 +96,10 @@ python src/download_entsoe.py        # ENTSO-E prices, generation, load, forecas
 python src/download_era5.py          # ERA5 weather grid, one request per month
 python src/process_era5.py           # ERA5 grid -> hourly indices per country
 python src/download_gas.py           # TTF gas and the carbon price proxy
-python src/download_ecb.py           # ECB yield curves and EUR/USD, for notebook 05
+python src/download_ecb.py           # ECB yield curves and EUR/USD since 2004, for notebook 05
 python src/build_db.py               # rebuilds data/lt_power.duckdb and runs the quality checks
 
-# run notebooks/01–04 in order with "Run All" in VS Code (Jupyter extension) or JupyterLab
+# run notebooks/01–05 in order with "Run All" in VS Code (Jupyter extension) or JupyterLab
 ```
 
 | Step | Typical run time |
@@ -105,7 +108,7 @@ python src/build_db.py               # rebuilds data/lt_power.duckdb and runs th
 | `download_era5.py` | several hours, depending on the Copernicus request queue |
 | `process_era5.py` | a few minutes |
 | `download_gas.py` | seconds |
-| `download_ecb.py` | seconds |
+| `download_ecb.py` | about a minute (22 years of daily curves) |
 | `build_db.py` | under a minute |
 | Notebook 01 | a few minutes |
 | Notebook 02 | under a minute |
@@ -257,8 +260,8 @@ The notebooks contain code and section titles only; the interpretation of every 
 | `01_price_drivers.ipynb` | How, and by how much, does the weather change the price? | H1–H5 | `lt_hourly` | 5 charts, `q1_summary.csv`, `q1_followup.csv` |
 | `02_wind_value.ipynb` | What are wind and solar output worth, and how much wind output is held back at negative prices? | H6–H7 | `lt_hourly`, `capture_rates_monthly` | 5 charts, `q2_summary.csv` |
 | `03_forecast.ipynb` | How accurately can tomorrow's hourly prices be forecast, and what is better information worth? | H8–H9 | `lt_hourly_all` and the neighbors' forecasts, capacities and carbon proxy | 8 charts, `q3_summary.csv`, `q3_followup.csv`, `q3_v2_summary.csv` |
-| `04_risk_backtesting.ipynb` | How reliable are the uncertainty estimates: the forecast's 80% intervals and the cash-flow-at-risk of a solar PPA? | H10–H11 | `lt_hourly_all` and the stored intervals of notebook 03 | 3 charts, `q4_summary.csv` |
-| `05_bank_portfolio.ipynb` | Does the same toolkit catch the weaknesses of a bank's market-risk, IRRBB and counterparty-exposure models? | – | ECB yield curves and EUR/USD | 4 charts, `q5_summary.csv` |
+| `04_risk_backtesting.ipynb` | How reliable are the uncertainty estimates: the forecast's 80% intervals and the cash-flow-at-risk of a solar PPA? | H10–H11 | `lt_hourly_all` and the 80% intervals of notebook 03 (`data/processed/q3_intervals.pkl`) | 3 charts, `q4_summary.csv` |
+| `05_bank_portfolio.ipynb` | Does the same toolkit catch the weaknesses of a bank's market-risk, IRRBB and counterparty-exposure models? | – | ECB yield curves and EUR/USD from September 2004 | 4 charts, `q5_summary.csv` |
 
 A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV tables.
 
@@ -267,7 +270,7 @@ A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV
 - **Information set.** Only information known at 12:00 CET on the day before delivery, the day-ahead auction deadline; days follow the auction's CET clock, and automatic checks confirm that no input uses later information (day-ahead wind and solar forecasts may be published after the auction; see section 14 of the analysis).
 - **Periods.** Training to September 2025; validation October–December 2025 (settings only); test January–August 2026; clean test September 1–26, 2026, used for no decision.
 - **Models.** A naive benchmark (yesterday's prices; last week's on Mondays and weekends), Lasso with one model per delivery hour, LightGBM, their average (fixed in advance as the main model), and an improved version (v2) chosen on the validation period; 80% prediction intervals by quantile regression averaging; a battery schedule optimized by linear programming.
-- **Run time and cache.** The first full run takes about 1.5–2 hours. Long results are stored in `data/processed/q3_cache/` under a key that hashes the model code, the model inputs and the settings, so a change to any of them recomputes the affected results automatically and later runs take 5–8 minutes. Each stored result prints when, at which git commit and in how long it was computed, together with the warnings it raised and the Lasso safeguard counts; warnings are counted, not hidden. Deleting the folder forces a full recomputation. Setting `FAST = True` at the top runs a quick test of about 5 minutes with monthly re-training.
+- **Run time and cache.** The first full run takes about 1.5–2 hours. Long results are stored in `data/processed/q3_cache/` under a key that hashes the model code, the model inputs and the settings, so a change to any of them recomputes the affected results automatically and later runs take 5–8 minutes. Each stored result prints when, at which git commit and in how long it was computed, together with the warnings it raised and the Lasso safeguard counts; warnings are counted, not hidden. Deleting the folder forces a full recomputation. Setting `FAST = True` at the top runs a quick test of about 5 minutes with monthly re-training. The 80% intervals go to notebook 04 in `data/processed/q3_intervals.pkl`, written with the date, commit and cache key of their computation, so notebook 04 cannot pick up an older result from the cache.
 - **Determinism.** Results are reproducible for the same data: `SEED = 42`, LightGBM runs with `deterministic=True`, Lasso runs single-threaded, and the notebooks read the database with one thread. With several threads, DuckDB adds floating-point numbers in an order that changes from run to run; the last digits of the inputs then differed between runs, which moved v2's Lasso forecasts by up to 0.01 €/MWh and changed the cache keys. One thread makes every read, and therefore every result, repeat exactly.
 
 ## Updating to newer data
@@ -285,15 +288,16 @@ A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV
 
 ## Tests
 
-The statistical tests and helpers that the notebooks share live in `src/backtests.py` and `src/notebook_tools.py`, and `tests/` checks them against independent references:
+The statistical tests, pricing functions and helpers that the notebooks share live in `src/`, and `tests/` checks them against independent references:
 
 - the Basel traffic light reproduces the Basel Committee's table (0–4 exceptions green, 5–9 yellow, 10 or more red at 99% over 250 days);
 - Kupiec's test agrees with the exact binomial test in large samples and, as expected, misleads in small ones (26 days without a hit: p = 0.019 against the exact 0.104), which is why the notebooks use the exact test there;
 - Christoffersen's statistic equals a Markov likelihood ratio written out by hand, rejects about 5% of independent sequences and detects clustering;
 - the Acerbi–Szekely statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
-- the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts; the Giacomini–White statistic equals its quadratic form;
+- the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts over 250 days, but about 15% over 26 days; the small-sample version equals the cosine estimator written out by hand and keeps its 5% over 26 days, with and without autocorrelation; the Giacomini–White statistic equals its quadratic form;
+- VaR and ES follow the stated quantile convention (interpolated, or the third-worst of 250 losses), and the P&L attribution zones follow the MAR32 thresholds;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
-- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and lower bound follow the Basel and EBA formulas;
+- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and lower bound follow the Basel and EBA formulas; banking-book items discounted at their own rate are worth their amount, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
 - the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, and SA-CCR matches a calculation by hand;
 - the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
 
@@ -302,7 +306,7 @@ pip install pytest
 pytest -q
 ```
 
-The tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
+The 56 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
 
 ## Troubleshooting
 
@@ -316,7 +320,8 @@ The tests need no downloaded data and run in seconds. GitHub Actions runs them o
 | `lt_hourly` does not have 32,135 hours | Some ENTSO-E or ERA5 months are missing; re-run the downloads and `build_db.py`. |
 | Notebook 03 takes too long | Use `FAST = True` for a test run; the full results are stored after the first run. |
 | Old charts in `figures/` | Delete the folder's contents and re-run the notebooks; every current file is recreated. |
-| `No intervals in data/processed/q3_cache` in notebook 04 | Run notebook 03 with `FAST = False` first; notebook 04 reads the intervals it stores. |
+| `No q3_intervals.pkl in data/processed` in notebook 04 | Run notebook 03 with `FAST = False` first; it hands its 80% intervals to notebook 04 in that file. |
+| Notebook 05 starts its data in 2015, not 2004 | `data/raw/ecb/` comes from an older download; re-run `python src/download_ecb.py`, so that the stressed VaR can search the history from September 2004. |
 
 ## Data sources and attribution
 
@@ -326,7 +331,11 @@ The tests need no downloaded data and run in seconds. GitHub Actions runs them o
 - **ECB Data Portal** (https://data.ecb.europa.eu/): euro-area yield curves (AAA and all central governments) and the EUR/USD reference rate, for notebook 05. Source: ECB statistics, reused with acknowledgement of the source.
 - **Yahoo Finance**, tickers `TTF=F` and `KRBN`, for personal, non-commercial use; the data are not redistributed.
 
-The literature and market sources behind the analysis are listed in [Appendix C of results_analysis.md](results_analysis.md#appendix-c-references).
+The literature and market sources behind the analysis are listed in [Appendix D of results_analysis.md](results_analysis.md#appendix-d-references).
+
+## How this project was made
+
+I built this project with an AI assistant (Claude, by Anthropic), which consulted with code and text writing, I personally reviewed both. I chose the questions and the scope, downloaded the data, ran every notebook and decided which results to report and how to respond to reviews. Every number in the documents comes from a notebook run on the downloaded data, and the statistical code is checked by the tests in `tests/`.
 
 ## License
 

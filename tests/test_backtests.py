@@ -1,11 +1,14 @@
-# The statistical tests of src/backtests.py, each checked against an independent reference.
+"""The statistical tests of src/backtests.py, each checked against an independent reference."""
 
 import numpy as np
 import pytest
 import statsmodels.api as sm
 from scipy import stats
 
-from backtests import acerbi_szekely_z2, backtest, christoffersen, diebold_mariano, giacomini_white, kupiec, traffic_light
+from scipy.signal import lfilter
+
+from backtests import (acerbi_szekely_z2, backtest, christoffersen, diebold_mariano, diebold_mariano_small_sample,
+                       giacomini_white, kupiec, pla_zone, traffic_light, var_es)
 
 
 def hits_with(x, n):
@@ -105,3 +108,41 @@ def test_giacomini_white_matches_the_quadratic_form_computed_by_hand():
     statistic, p_value = giacomini_white(d)
     assert statistic == pytest.approx(by_hand)
     assert p_value == pytest.approx(stats.chi2.sf(by_hand, 2))
+
+
+def test_small_sample_diebold_mariano_matches_the_cosine_estimator_written_out_by_hand():
+    d = np.random.default_rng(5).normal(0.3, 1, 26)
+    n, b = len(d), 3                                      # floor(0.4 x 26^(2/3)) = floor(3.51) = 3 cosines
+    projections = [np.sqrt(2 / n) * sum(np.cos(np.pi * j * (t - 0.5) / n) * (d[t - 1] - d.mean()) for t in range(1, n + 1))
+                   for j in range(1, b + 1)]
+    by_hand = d.mean() / np.sqrt(np.mean(np.square(projections)) / n)
+    statistic, p_value, b_used = diebold_mariano_small_sample(d)
+    assert b_used == b
+    assert statistic == pytest.approx(by_hand)
+    assert p_value == pytest.approx(2 * stats.t.sf(abs(by_hand), b))
+
+
+def ar1(n, rho, rng, burn=50):
+    return lfilter([1.0], [1.0, -rho], rng.standard_normal(n + burn))[burn:]
+
+
+def test_on_26_days_the_newey_west_test_over_rejects_and_the_small_sample_test_does_not():
+    # September has 26 forecast days in notebook 03. Equal accuracy is true in every simulated sample.
+    rng = np.random.default_rng(6)
+    iid = [rng.normal(0, 1, 26) for _ in range(2000)]
+    autocorrelated = [ar1(26, 0.3, rng) for _ in range(2000)]
+    assert np.mean([diebold_mariano(d)[1] < 0.05 for d in iid[:1000]]) > 0.10     # about 15% instead of 5%
+    for sample in (iid, autocorrelated):
+        assert 0.025 <= np.mean([diebold_mariano_small_sample(d)[1] < 0.05 for d in sample]) <= 0.085
+
+
+def test_var_and_es_follow_the_stated_quantile_convention():
+    pnl = -np.arange(1, 251, dtype=float)                 # 250 days with losses of 1, 2, ..., 250
+    assert var_es(pnl) == pytest.approx((247.51, 247.0))  # interpolated VaR; ES = mean of the 7 worst losses
+    assert var_es(pnl, method="inverted_cdf") == pytest.approx((248.0, 247.0))   # VaR = the third-worst loss
+
+
+@pytest.mark.parametrize("spearman, ks, zone", [(0.85, 0.05, "green"), (0.80, 0.05, "amber"), (0.85, 0.09, "amber"),
+                                                 (0.70, 0.12, "amber"), (0.69, 0.05, "red"), (0.85, 0.121, "red")])
+def test_pla_zones_follow_the_mar32_thresholds(spearman, ks, zone):
+    assert pla_zone(spearman, ks) == zone

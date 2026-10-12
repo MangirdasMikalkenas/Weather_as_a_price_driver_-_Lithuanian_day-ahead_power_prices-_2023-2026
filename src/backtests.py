@@ -5,7 +5,10 @@ Statistical tests for forecasts and risk models, shared by notebooks 03 and 04.
   test, Christoffersen's independence test and the Basel traffic light (Kupiec, 1995; Christoffersen, 1998;
   Basel Committee on Banking Supervision, 1996).
 - Expected Shortfall: the Z2 test of Acerbi and Szekely (2014).
-- Forecast accuracy: the Diebold-Mariano and Giacomini-White tests on daily loss differences.
+- Forecast accuracy: the Diebold-Mariano and Giacomini-White tests on daily loss differences, and a version of the
+  Diebold-Mariano test for short samples (a month of days) with fixed-smoothing critical values.
+- Historical-simulation VaR and ES with an explicit quantile convention, and the zones of the FRTB P&L attribution
+  test (Basel Committee, MAR32).
 
 Each test is checked against a reference in tests/test_backtests.py.
 """
@@ -81,6 +84,23 @@ def diebold_mariano(loss_difference, max_lags=7):
     return fit.tvalues[0], fit.pvalues[0]
 
 
+def diebold_mariano_small_sample(loss_difference, b=None):
+    """Diebold-Mariano test for short samples: the long-run variance is the equal-weighted cosine (EWC) estimator,
+    the mean of the squares of the first b cosine transforms of the demeaned loss differences, and the statistic is
+    compared with a t distribution with b degrees of freedom (fixed-smoothing asymptotics). With the Newey-West
+    variance and normal critical values, a 26-day sample rejects a true null about three times as often as the nominal
+    5% (tests/test_backtests.py). b defaults to the rule of Lazarus, Lewis, Stock and Watson (2018), 0.4 n^(2/3)
+    rounded down; see also Coroneo and Iacone (2020). Returns (statistic, p-value, b)."""
+    d = np.asarray(loss_difference, dtype=float)
+    n = len(d)
+    b = b or max(1, int(np.floor(0.4 * n ** (2 / 3))))
+    t = np.arange(1, n + 1)
+    cosines = np.sqrt(2 / n) * np.cos(np.pi * np.outer(np.arange(1, b + 1), t - 0.5) / n)
+    long_run_variance = np.mean((cosines @ (d - d.mean())) ** 2)
+    statistic = np.sqrt(n) * d.mean() / np.sqrt(long_run_variance)
+    return statistic, 2 * stats.t.sf(abs(statistic), b), b
+
+
 def giacomini_white(loss_difference):
     """Giacomini-White conditional test of equal accuracy, with a constant and yesterday's loss difference as
     instruments: the statistic is n times the uncentred R-squared of regressing 1 on the instruments times the loss
@@ -89,3 +109,27 @@ def giacomini_white(loss_difference):
     z = np.column_stack([np.ones(len(d) - 1), d[:-1]]) * d[1:, None]
     statistic = len(z) * sm.OLS(np.ones(len(z)), z).fit().rsquared       # no constant: statsmodels uses uncentred R²
     return statistic, 1 - stats.chi2.cdf(statistic, df=2)
+
+
+def var_es(pnl, var_level=0.99, es_level=0.975, method="linear"):
+    """Historical-simulation VaR and Expected Shortfall of a P&L sample, both as positive losses. `method` is the
+    numpy quantile convention: "linear" (numpy's default) interpolates between neighbouring outcomes, "inverted_cdf"
+    takes an observed outcome; with 250 outcomes the 99% VaR is then the third-worst loss. ES is the mean of the
+    outcomes at or below the (1 - es_level) quantile. Returns (VaR, ES)."""
+    pnl = np.asarray(pnl, dtype=float)
+    var = -np.quantile(pnl, 1 - var_level, method=method)
+    cutoff = np.quantile(pnl, 1 - es_level, method=method)
+    return var, -pnl[pnl <= cutoff].mean()
+
+
+PLA_GREEN = {"spearman": 0.80, "ks": 0.09}    # Basel Committee, MAR32: P&L attribution test, green zone
+PLA_RED = {"spearman": 0.70, "ks": 0.12}      # red zone beyond these; amber in between
+
+
+def pla_zone(spearman, ks, green=PLA_GREEN, red=PLA_RED):
+    """Zone of the P&L attribution test (MAR32): green when the Spearman correlation of hypothetical and
+    risk-theoretical P&L is above 0.80 and their Kolmogorov-Smirnov distance below 0.09; red when the correlation is
+    below 0.70 or the distance above 0.12; amber otherwise."""
+    if spearman > green["spearman"] and ks < green["ks"]:
+        return "green"
+    return "red" if spearman < red["spearman"] or ks > red["ks"] else "amber"
