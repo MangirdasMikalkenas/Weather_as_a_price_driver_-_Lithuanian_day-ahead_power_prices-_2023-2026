@@ -6,9 +6,9 @@ Pricing and interest rate shocks for the small bank portfolio of notebook 05.
   matrix and thousands of scenario curves are revalued with one matrix product.
 - Instruments: a fixed-coupon bullet bond, a payer interest rate swap (single curve) and an FX forward that receives
   US dollars against euros, all valued in euros by full revaluation.
-- IRRBB: the six standardised shocks of the Basel Committee (2016) and the post-shock lower bound of the EBA
-  guidelines (EBA/GL/2022/14); the cash flows and present value of a stylised banking book, and the change in its
-  net interest income over one year, with a floor on the rates paid on non-maturity deposits.
+- IRRBB: the six standardised shocks of the Basel Committee (2016) and the post-shock lower bound of Commission
+  Delegated Regulation (EU) 2024/856, Article 3(7); the cash flows and present value of a stylised banking book, and
+  the change in its net interest income over one year, with a floor on the rates paid on non-maturity deposits.
 
 Every function is checked against a closed-form result in tests/test_bank_products.py.
 """
@@ -88,13 +88,14 @@ def supervisory_shocks(times, sizes=EUR_SHOCK_SIZES_BP):
 
 
 def eba_lower_bound(times):
-    """Post-shock lower bound of EBA/GL/2022/14: -150 bp at maturity 0, rising by 3 bp a year to 0 at 50 years."""
+    """Post-shock lower bound of Delegated Regulation (EU) 2024/856, Article 3(7), drafted by the EBA: -150 bp at
+    maturity 0, rising by 3 bp a year to 0 at 50 years."""
     return np.minimum(-0.015 + 0.0003 * np.asarray(times, float), 0.0)
 
 
 def shocked_rates(base, times, shock):
-    """Shocked zero rates with the EBA lower bound; where the observed rate is already below the bound, the observed
-    rate is the bound, so the bound never raises a rate."""
+    """Shocked zero rates with the post-shock lower bound. Where the observed rate is already below the bound, the
+    observed rate is the bound (Article 3(7)), so the bound never raises a rate."""
     base = np.asarray(base, float)
     return np.maximum(base + shock, np.minimum(eba_lower_bound(times), base))
 

@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml/badge.svg)](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml)
 
-This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models, and applies the same toolkit to a small bank portfolio (notebook 05) ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
+This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models, and tests whether the same checks detect a defect planted on purpose in the risk model of a small bank portfolio (notebook 05) ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
 **For a model-validation reader:** [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) rates the models and their backtests on one page, with decisions and findings by severity.
 
@@ -13,7 +13,7 @@ This project measures how the weather moves the Lithuanian day-ahead electricity
 - Solar's capture rate fell from 0.87 to 0.54 between January–August 2023 and January–August 2026, while wind's showed no downward trend; wind farms held back 18% of their output in negative-price hours, 0.8% of their 2025 production.
 - The forecast's mean absolute error was 24.8 €/MWh against 41.8 €/MWh for repeating yesterday's prices; an improved version was a further 5% better on the 26 days of September 2026, a borderline result (small-sample Diebold–Mariano p = 0.050, Giacomini–White p = 0.070), and a battery scheduled with the forecast earned 89% of the perfect-foresight profit.
 - Replacing the wind forecast with the wind that actually blew made the day-ahead forecast 4% worse (p = 0.003), consistent with the auction pricing expectations rather than outcomes; this tests perfect hindsight, not a better forecast made before the auction.
-- In backtests with exact binomial, Christoffersen, Basel traffic-light and Acerbi–Szekely tests, the forecast's 80% intervals under-predicted price spikes (the price exceeded the upper bound in 13.5% of hours against 10%), and a 99% cash-flow-at-risk for a solar PPA based on 250 days of history failed in summer (40 exceptions in 974 days against about 10); volatility scaling cut the exceptions to 24 and a full year of history to 14.
+- In backtests with exact binomial, Christoffersen, Basel-style traffic-light and Acerbi–Szekely tests, the forecast's 80% intervals under-predicted price spikes (the price exceeded the upper bound in 13.5% of hours against 10%), and a 99% cash-flow-at-risk for a solar PPA based on 250 days of history failed in summer (40 exceptions in 974 days against about 10); volatility scaling cut the exceptions to 24 and a full year of history to 14.
 
 Eleven hypotheses were tested: six were supported, two partly supported and three not supported ([Appendix B of the analysis](results_analysis.md#appendix-b-hypotheses-and-verdicts)).
 
@@ -54,7 +54,7 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 │   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks, banking-book cash flows, NII
 │   ├── exposure.py              # Hull–White exposure simulation, PFE, effective EPE, SA-CCR
 │   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano (also for short
-│                                #   samples), Giacomini–White, VaR and ES, P&L attribution zones
+│                                #   samples), Giacomini–White, VaR and ES, EWMA volatility scaling, P&L attribution zones
 ├── tests/                       # tests of the statistics, the helpers and the SQL layer (pytest)
 ├── sql/                         # database schema, cleaning, analysis table, quality checks
 │   ├── 01_schema.sql
@@ -261,7 +261,7 @@ The notebooks contain code and section titles only; the interpretation of every 
 | `02_wind_value.ipynb` | What are wind and solar output worth, and how much wind output is held back at negative prices? | H6–H7 | `lt_hourly`, `capture_rates_monthly` | 5 charts, `q2_summary.csv` |
 | `03_forecast.ipynb` | How accurately can tomorrow's hourly prices be forecast, and what is better information worth? | H8–H9 | `lt_hourly_all` and the neighbors' forecasts, capacities and carbon proxy | 8 charts, `q3_summary.csv`, `q3_followup.csv`, `q3_v2_summary.csv` |
 | `04_risk_backtesting.ipynb` | How reliable are the uncertainty estimates: the forecast's 80% intervals and the cash-flow-at-risk of a solar PPA? | H10–H11 | `lt_hourly_all` and the 80% intervals of notebook 03 (`data/processed/q3_intervals.pkl`) | 3 charts, `q4_summary.csv` |
-| `05_bank_portfolio.ipynb` | Does the same toolkit catch the weaknesses of a bank's market-risk, IRRBB and counterparty-exposure models? | – | ECB yield curves and EUR/USD from September 2004 | 4 charts, `q5_summary.csv` |
+| `05_bank_portfolio.ipynb` | Do standard checks detect a defect planted on purpose in a bank's VaR model, and what do IRRBB and counterparty-exposure checks show? | – | ECB yield curves and EUR/USD from September 2004 | 4 charts, `q5_summary.csv` |
 
 A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV tables.
 
@@ -290,14 +290,15 @@ A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV
 
 The statistical tests, pricing functions and helpers that the notebooks share live in `src/`, and `tests/` checks them against independent references:
 
-- the Basel traffic light reproduces the Basel Committee's table (0–4 exceptions green, 5–9 yellow, 10 or more red at 99% over 250 days);
+- the Basel traffic light reproduces the Basel Committee's table (0–4 exceptions green, 5–9 yellow, 10 or more red at 99% over 250 days), and the same binomial rule gives Basel-style zones at other levels;
 - Kupiec's test agrees with the exact binomial test in large samples and, as expected, misleads in small ones (26 days without a hit: p = 0.019 against the exact 0.104), which is why the notebooks use the exact test there;
 - Christoffersen's statistic equals a Markov likelihood ratio written out by hand, rejects about 5% of independent sequences and detects clustering;
 - the Acerbi–Szekely statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
 - the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts over 250 days, but about 15% over 26 days; the small-sample version equals the cosine estimator written out by hand and keeps its 5% over 26 days, with and without autocorrelation; the Giacomini–White statistic equals its quadratic form;
 - VaR and ES follow the stated quantile convention (interpolated, or the third-worst of 250 losses), and the P&L attribution zones follow the MAR32 thresholds;
+- the EWMA volatility follows its recursion, and volatility-scaled past changes take on the current volatility;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
-- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and lower bound follow the Basel and EBA formulas; banking-book items discounted at their own rate are worth their amount, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
+- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book items discounted at their own rate are worth their amount, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
 - the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, and SA-CCR matches a calculation by hand;
 - the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
 
@@ -306,7 +307,7 @@ pip install pytest
 pytest -q
 ```
 
-The 56 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
+The 58 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
 
 ## Troubleshooting
 
@@ -335,7 +336,7 @@ The literature and market sources behind the analysis are listed in [Appendix D 
 
 ## How this project was made
 
-I built this project with an AI assistant (Claude, by Anthropic), which consulted with code and text writing, I personally reviewed both. I chose the questions and the scope, downloaded the data, ran every notebook and decided which results to report and how to respond to reviews. Every number in the documents comes from a notebook run on the downloaded data, and the statistical code is checked by the tests in `tests/`.
+I built this project with an AI assistant (Claude, by Anthropic), which consulted with code and text writing, I personally reviewed all AI outputs. I chose the questions and the scope, downloaded the data, ran every notebook and decided which results to report and how to respond to reviews. Every number in the documents comes from a notebook run on the downloaded data, and the statistical code is checked by the tests in `tests/`.
 
 ## License
 

@@ -2,6 +2,7 @@ finding,estimate
 "VaR 99%, risk model","42 exceptions in 1978 days (2.1% against 1%); binomial p = <0.001, Christoffersen p = 0.070; zones 2019: yellow, 2020: red, 2021: green, 2022: yellow, 2023: green, 2024: green, 2025: yellow, 2026: green"
 VaR 99% as the third-worst of 250 losses,"40 exceptions; zones 2019: yellow, 2020: red, 2021: green, 2022: yellow, 2023: green, 2024: green, 2025: yellow, 2026: green"
 VaR 99% with the front-office risk factors,32 exceptions
+"Challenger, 99% VaR exceptions: plain / volatility-scaled HS",risk model 42 / 42; front-office risk factors 32 / 27; about 20 expected
 Expected Shortfall 97.5%,"Acerbi–Szekely Z2 = -0.91, p = <0.001"
 Stressed VaR against VaR (stress period chosen at each year-end),median ratio 2.20; stressed VaR below VaR on 0 days; stress periods: 2008-04-09 – 2009-03-31 (2019–2026)
 "Stressed VaR, front-office risk factors against the risk model",median ratio 0.97
@@ -10,7 +11,8 @@ Stressed VaR against VaR (stress period chosen at each year-end),median ratio 2.
 "IRRBB, worst ΔEVE",parallel up: -21.2 € million (-21.2% of Tier 1)
 "IRRBB, worst ΔEVE by hedge size","0: -50.8%, 250: -21.2%, 500: -13.3%"
 "IRRBB, ΔNII (deposit rates floored at 0%)","parallel up +3.25, parallel down -6.75 € million (a decline of 6.8% of Tier 1 against the 5% outlier threshold); without the floor, parallel down -3.25"
-"PFE, netting set without margin","peak PFE 998,642 €; effective EPE 167,562 €; netting benefit 13%"
-"PFE, with variation margin","effective EPE 60,175 €"
-SA-CCR against the internal model,"4.13 times without margin, 3.96 times with margin"
+"PFE, netting set without margin","peak PFE 952,532 €; effective EPE 159,169 €; netting benefit 13%"
+"PFE, with variation margin","effective EPE 57,159 €"
+"PFE, stressed calibration","2008-02-11 – 2011-01-13: effective EPE 255,329 € without margin, 91,232 € with margin; EAD 357,460 € and 127,725 €"
+SA-CCR against the internal model,"2.71 times without margin, 2.61 times with margin"
 Martingale tests,largest |z| = 1.38

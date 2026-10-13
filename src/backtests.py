@@ -2,13 +2,13 @@
 Statistical tests for forecasts and risk models, shared by notebooks 03 and 04.
 
 - Coverage of quantile forecasts and VaR-type limits: Kupiec's proportion-of-failures test, the exact binomial
-  test, Christoffersen's independence test and the Basel traffic light (Kupiec, 1995; Christoffersen, 1998;
-  Basel Committee on Banking Supervision, 1996).
+  test, Christoffersen's independence test and the Basel traffic light, applied as Basel-style binomial zones at
+  other levels and sample sizes (Kupiec, 1995; Christoffersen, 1998; Basel Committee on Banking Supervision, 1996).
 - Expected Shortfall: the Z2 test of Acerbi and Szekely (2014).
 - Forecast accuracy: the Diebold-Mariano and Giacomini-White tests on daily loss differences, and a version of the
   Diebold-Mariano test for short samples (a month of days) with fixed-smoothing critical values.
-- Historical-simulation VaR and ES with an explicit quantile convention, and the zones of the FRTB P&L attribution
-  test (Basel Committee, MAR32).
+- Historical-simulation VaR and ES with an explicit quantile convention, EWMA volatilities and volatility-scaled
+  (filtered) historical scenarios, and the zones of the FRTB P&L attribution test (Basel Committee, MAR32).
 
 Each test is checked against a reference in tests/test_backtests.py.
 """
@@ -42,7 +42,9 @@ def christoffersen(hits):
 
 
 def traffic_light(x, n, p):
-    """Basel traffic light for any level: the zone follows the binomial probability of seeing at most x hits."""
+    """Zones built like the Basel traffic light: green while the binomial probability of seeing at most x hits is
+    below 95%, red from 99.99%, yellow in between. At 99% over 250 days these are the Basel zones (0-4 green, 5-9
+    yellow, 10 or more red); at other levels or sample sizes they are Basel-style zones, not a regulatory test."""
     cumulative = stats.binom.cdf(x, n, p)
     return "green" if cumulative < 0.95 else ("yellow" if cumulative < 0.9999 else "red")
 
@@ -120,6 +122,25 @@ def var_es(pnl, var_level=0.99, es_level=0.975, method="linear"):
     var = -np.quantile(pnl, 1 - var_level, method=method)
     cutoff = np.quantile(pnl, 1 - es_level, method=method)
     return var, -pnl[pnl <= cutoff].mean()
+
+
+def ewma_volatility(changes, lam=0.94, warmup=30):
+    """RiskMetrics (EWMA) volatility of each column of `changes`. Row i is the forecast for row i from the rows before
+    it: sigma2[i] = lam sigma2[i-1] + (1 - lam) changes[i-1]^2, started at the variance of the first `warmup` rows.
+    Returns an array of the same shape as `changes`."""
+    x = np.asarray(changes, dtype=float)
+    flat = x.reshape(len(x), -1)
+    var = np.empty_like(flat)
+    var[0] = flat[:warmup].var(axis=0)
+    for i in range(1, len(flat)):
+        var[i] = lam * var[i - 1] + (1 - lam) * flat[i - 1] ** 2
+    return np.sqrt(np.maximum(var, 1e-16)).reshape(x.shape)
+
+
+def volatility_scaled(changes, sigma, rows, now):
+    """Filtered historical simulation (Hull & White, 1998): the past changes in `rows`, each rescaled from the
+    volatility of its own day to the volatility forecast for row `now` (sigma as returned by ewma_volatility)."""
+    return np.asarray(changes)[rows] * np.asarray(sigma)[now] / np.asarray(sigma)[rows]
 
 
 PLA_GREEN = {"spearman": 0.80, "ks": 0.09}    # Basel Committee, MAR32: P&L attribution test, green zone

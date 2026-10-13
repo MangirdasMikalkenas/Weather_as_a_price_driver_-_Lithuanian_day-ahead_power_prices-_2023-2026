@@ -8,7 +8,8 @@ from scipy import stats
 from scipy.signal import lfilter
 
 from backtests import (acerbi_szekely_z2, backtest, christoffersen, diebold_mariano, diebold_mariano_small_sample,
-                       giacomini_white, kupiec, pla_zone, traffic_light, var_es)
+                       ewma_volatility, giacomini_white, kupiec, pla_zone, traffic_light, var_es,
+                       volatility_scaled)
 
 
 def hits_with(x, n):
@@ -146,3 +147,25 @@ def test_var_and_es_follow_the_stated_quantile_convention():
                                                  (0.70, 0.12, "amber"), (0.69, 0.05, "red"), (0.85, 0.121, "red")])
 def test_pla_zones_follow_the_mar32_thresholds(spearman, ks, zone):
     assert pla_zone(spearman, ks) == zone
+
+
+def test_ewma_volatility_follows_the_riskmetrics_recursion_column_by_column():
+    x = np.random.default_rng(7).normal(0, [1.0, 2.0], (80, 2))
+    lam, warmup = 0.94, 30
+    sigma = ewma_volatility(x, lam, warmup)
+    for j in range(2):
+        var = [np.var(x[:warmup, j])]
+        for i in range(1, len(x)):
+            var.append(lam * var[-1] + (1 - lam) * x[i - 1, j] ** 2)
+        assert sigma[:, j] == pytest.approx(np.sqrt(var))
+    assert ewma_volatility(x[:, 0], lam, warmup) == pytest.approx(sigma[:, 0])       # one series works too
+
+
+def test_volatility_scaling_carries_past_changes_to_the_current_volatility():
+    # volatility doubles halfway: rescaled to the second regime, the first half's changes take its volatility
+    rng = np.random.default_rng(8)
+    x = np.r_[rng.normal(0, 1, 3000), rng.normal(0, 2, 3000)]
+    sigma = ewma_volatility(x)
+    scaled = volatility_scaled(x, sigma, np.arange(1000, 2900), len(x) - 1)
+    assert np.std(scaled) == pytest.approx(sigma[-1], rel=0.1)
+    assert sigma[-500:].mean() == pytest.approx(2.0, rel=0.1) and sigma[2000:2900].mean() == pytest.approx(1.0, rel=0.1)
