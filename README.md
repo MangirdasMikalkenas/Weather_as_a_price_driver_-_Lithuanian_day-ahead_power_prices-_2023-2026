@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml/badge.svg)](https://github.com/MangirdasMikalkenas/Weather_as_a_price_driver_-_Lithuanian_day-ahead_power_prices-_2023-2026/actions/workflows/tests.yml)
 
-This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates the way banks test Value-at-Risk models, and tests whether the same checks detect a defect planted on purpose in the risk model of a small bank portfolio (notebook 05) ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
+This project measures how the weather moves the Lithuanian day-ahead electricity price, what wind and solar output is worth, and how accurately tomorrow's prices can be forecast from public data. It joins 32,135 hourly prices (January 2023 – August 2026, with September 2026 kept as a clean forecast test) with ERA5 weather, ENTSO-E grid data and fuel prices. Wind across the Baltic Sea region is the weather variable that moves the price most, and the size of its effect depends strongly on interconnector availability; solar's market value has fallen sharply while wind's has not; and a forecast built only on information available before the auction has a 41% lower error than repeating yesterday's prices. The full results, with recommendations for a trading desk and an asset owner, are in **[results_analysis.md](results_analysis.md)**. It also backtests its own uncertainty estimates with standard Value-at-Risk backtests, and tests whether the same checks detect a defect planted on purpose in the risk model of a small bank portfolio (notebook 05) ([notebook 04](notebooks/04_risk_backtesting.ipynb), [section 14 of the analysis](results_analysis.md#14-the-80-intervals-under-predict-price-spikes-and-a-250-day-cash-flow-at-risk-for-a-solar-ppa-fails-in-summer)).
 
 **For a model-validation reader:** [VALIDATION_SUMMARY.md](VALIDATION_SUMMARY.md) rates the models and their backtests on one page, with decisions and findings by severity.
 
@@ -51,11 +51,12 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 │   ├── download_ecb.py
 │   ├── build_db.py
 │   ├── notebook_tools.py        # helpers shared by the notebooks (charts, p-values, gaps, cache keys)
-│   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks, banking-book cash flows, NII
-│   ├── exposure.py              # Hull–White exposure simulation, PFE, effective EPE, SA-CCR
+│   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks, banking-book EVE and NII
+│   ├── exposure.py              # Hull–White exposure simulation and calibration, PFE, effective EPE, SA-CCR
+│   ├── risk_engines.py          # historical-simulation VaR and CFaR, volatility scaling, search for the stress window
 │   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano (also for short
 │                                #   samples), Giacomini–White, VaR and ES, EWMA volatility scaling, P&L attribution zones
-├── tests/                       # tests of the statistics, the helpers and the SQL layer (pytest)
+├── tests/                       # tests of the statistics, the risk engines, the helpers and the SQL layer (pytest)
 ├── sql/                         # database schema, cleaning, analysis table, quality checks
 │   ├── 01_schema.sql
 │   ├── 02_clean.sql
@@ -288,7 +289,7 @@ A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV
 
 ## Tests
 
-The statistical tests, pricing functions and helpers that the notebooks share live in `src/`, and `tests/` checks them against independent references:
+The statistical tests, pricing functions, risk engines and helpers that the notebooks share live in `src/`, and `tests/` checks them against independent references and answers known in advance:
 
 - the Basel traffic light reproduces the Basel Committee's table (0–4 exceptions green, 5–9 yellow, 10 or more red at 99% over 250 days), and the same binomial rule gives Basel-style zones at other levels;
 - Kupiec's test agrees with the exact binomial test in large samples and, as expected, misleads in small ones (26 days without a hit: p = 0.019 against the exact 0.104), which is why the notebooks use the exact test there;
@@ -297,9 +298,10 @@ The statistical tests, pricing functions and helpers that the notebooks share li
 - the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts over 250 days, but about 15% over 26 days; the small-sample version equals the cosine estimator written out by hand and keeps its 5% over 26 days, with and without autocorrelation; the Giacomini–White statistic equals its quadratic form;
 - VaR and ES follow the stated quantile convention (interpolated, or the third-worst of 250 losses), and the P&L attribution zones follow the MAR32 thresholds;
 - the EWMA volatility follows its recursion, and volatility-scaled past changes take on the current volatility;
+- the VaR and CFaR engines of notebooks 04 and 05 give answers known in advance: a crash enters the next day's forecast but not the same day's, scenarios are revalued on the market of the day before, the historical-simulation VaR of a normal and of a lognormal position matches the closed form, filtered scenarios take the volatility forecast for the day ahead, the stress-window search finds a planted stress period without looking past its review date, and the CFaR and ES of a known window of losses match a calculation by hand;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
-- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book items discounted at their own rate are worth their amount, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
-- the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, and SA-CCR matches a calculation by hand;
+- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book items discounted at their own rate are worth their amount, the change in EVE of zero-coupon items matches the closed form, with and without the lower bound, a payer hedge at par is worth zero and offsets part of the loss when rates rise, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
+- the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, the expected exposure and PFE of an FX forward match the lognormal closed form, the calibration recovers the volatilities and the correlation of a simulated market from the 1-year and the 5-year rate, and SA-CCR matches a calculation by hand;
 - the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
 
 ```bash
@@ -307,7 +309,7 @@ pip install pytest
 pytest -q
 ```
 
-The 58 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
+The 75 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top). To check that the tests would notice an error, `python tests/check_mutations.py` plants twelve errors in the engines, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound and others – and confirms that tests fail on each.
 
 ## Troubleshooting
 

@@ -5,9 +5,9 @@ from functools import partial
 import numpy as np
 import pytest
 
-from bank_products import (banking_book_cash_flows, bond_value, discount_factors, eba_lower_bound, fx_forward_strike,
-                           fx_forward_value, interpolation_matrix, nii_change, par_rate, payer_swap_value,
-                           present_value, shocked_rates, supervisory_shocks)
+from bank_products import (banking_book_cash_flows, bond_value, discount_factors, eba_lower_bound, economic_value,
+                           fx_forward_strike, fx_forward_value, interpolation_matrix, nii_change, par_rate,
+                           payer_swap_value, present_value, shocked_curve, shocked_rates, supervisory_shocks)
 
 TENORS = np.array([0.25, 0.5, 1, 2, 3, 5, 7, 10, 15, 20, 30])
 FLAT = np.full(len(TENORS), 0.03)
@@ -117,3 +117,38 @@ def test_the_deposit_floor_never_raises_a_rate_already_below_it():
     negative = {"deposits": dict(amount=100.0, rate=-0.005, years=0.0, kind="bullet", non_maturity=True)}
     assert nii_change({}, negative, -0.02, pass_through=0.5) == pytest.approx(0.0)    # stays at -0.5%
     assert nii_change({}, negative, 0.02, pass_through=0.5) == pytest.approx(-1.0)    # -0.5% -> +0.5%
+
+
+ZERO_COUPON_LOAN = {"loan": dict(amount=100.0, rate=0.0, years=5, kind="bullet")}     # 100 repaid in 5 years
+
+
+def test_the_eve_change_of_zero_coupon_items_matches_the_closed_form():
+    # a 5-year zero-coupon loan funded by a 1-year zero-coupon deposit, on a flat 3% curve, after +200 bp
+    deposit = {"deposit": dict(amount=90.0, rate=0.0, years=1, kind="bullet")}
+    base = flat(0.03)
+    change = (economic_value(ZERO_COUPON_LOAN, deposit, shocked_curve(base, "parallel up"), TENORS)
+              - economic_value(ZERO_COUPON_LOAN, deposit, base, TENORS))
+    assert change == pytest.approx(100 * (np.exp(-0.05 * 5) - np.exp(-0.03 * 5)) - 90 * (np.exp(-0.05) - np.exp(-0.03)))
+
+
+def test_the_post_shock_lower_bound_limits_a_fall_from_a_low_curve():
+    # from 0.5%, parallel down would take every rate to -1.5%; the bound, -1.5% + 3 bp a year, stops the 5-year rate
+    # at -1.35% and the 60-year rate at 0%
+    down = shocked_curve(flat(0.005), "parallel down")
+    assert down(np.array([0.0, 5.0, 60.0])) == pytest.approx([-0.015, -0.0135, 0.0])
+    assert economic_value(ZERO_COUPON_LOAN, {}, down, TENORS) == pytest.approx(100 * np.exp(0.0135 * 5))
+
+
+def test_a_payer_hedge_at_par_is_worth_zero_and_offsets_part_of_the_eve_loss_when_rates_rise():
+    assets = {"fixed-rate loan": dict(amount=100.0, rate=0.03, years=10, kind="bullet")}
+    deposits = {"deposits": dict(amount=90.0, rate=0.0, years=0.0, kind="bullet")}
+    base, k = flat(0.03), float(par_rate(np.full(len(TENORS), 0.03), TENORS, 7))
+    up = shocked_curve(base, "parallel up")
+
+    def eve(curve, hedge_notional):
+        return economic_value(assets, deposits, curve, TENORS, hedge_notional, k, 7)
+
+    assert eve(base, 50.0) == pytest.approx(eve(base, 0.0))                       # a 7-year swap at par is worth 0
+    hedge_at_5_percent = 50.0 * ((1 - np.exp(-0.05 * 7)) - k * np.exp(-0.05 * np.arange(1, 8)).sum())
+    assert eve(up, 50.0) - eve(up, 0.0) == pytest.approx(hedge_at_5_percent)
+    assert eve(up, 0.0) - eve(base, 0.0) < eve(up, 50.0) - eve(base, 50.0) < 0     # a smaller loss, still a loss

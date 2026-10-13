@@ -7,8 +7,9 @@ Pricing and interest rate shocks for the small bank portfolio of notebook 05.
 - Instruments: a fixed-coupon bullet bond, a payer interest rate swap (single curve) and an FX forward that receives
   US dollars against euros, all valued in euros by full revaluation.
 - IRRBB: the six standardised shocks of the Basel Committee (2016) and the post-shock lower bound of Commission
-  Delegated Regulation (EU) 2024/856, Article 3(7); the cash flows and present value of a stylised banking book, and
-  the change in its net interest income over one year, with a floor on the rates paid on non-maturity deposits.
+  Delegated Regulation (EU) 2024/856, Article 3(7); the cash flows and present value of a stylised banking book, its
+  economic value of equity with a payer-swap hedge, and the change in its net interest income over one year, with a
+  floor on the rates paid on non-maturity deposits.
 
 Every function is checked against a closed-form result in tests/test_bank_products.py.
 """
@@ -100,6 +101,12 @@ def shocked_rates(base, times, shock):
     return np.maximum(base + shock, np.minimum(eba_lower_bound(times), base))
 
 
+def shocked_curve(base_rate, scenario, sizes=EUR_SHOCK_SIZES_BP):
+    """The zero curve after one of the six supervisory shocks, with the post-shock lower bound, as a function of the
+    maturity like `base_rate`."""
+    return lambda t: shocked_rates(base_rate(t), t, supervisory_shocks(t, sizes)[scenario])
+
+
 def banking_book_cash_flows(item):
     """Times (years) and amounts of an item's principal and interest, annual where they recur. `kind` is "bullet"
     (interest, then the principal at `years`; one payment when `years` is below one; repaid at once when it is zero),
@@ -131,6 +138,14 @@ def present_value(items, rate_at):
         times, flows = banking_book_cash_flows(item)
         total += float((flows * np.exp(-rate_at(times) * times)).sum())
     return total
+
+
+def economic_value(assets, liabilities, rate_at, tenors, hedge_notional=0.0, hedge_rate=0.0, hedge_maturity=1):
+    """Economic value of equity: the present value of the assets minus that of the liabilities (equity itself
+    excluded), plus a banking-book swap that pays `hedge_rate` and receives floating, valued on the curve
+    rate_at(tenors)."""
+    hedge = payer_swap_value(rate_at(tenors), tenors, hedge_notional, hedge_rate, hedge_maturity)
+    return present_value(assets, rate_at) - present_value(liabilities, rate_at) + hedge
 
 
 def nii_change(assets, liabilities, shock, pass_through, deposit_floor=0.0, hedge_notional=0.0, hedge_reset=0.25):

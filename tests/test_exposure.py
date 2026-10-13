@@ -1,12 +1,14 @@
-"""The exposure model of src/exposure.py: curve fit, martingale tests, trades at par and SA-CCR by hand."""
+"""The exposure model of src/exposure.py: curve fit, martingale tests, trades at par, the exposure of an FX forward
+against its closed form, the calibration on a simulated market and SA-CCR by hand."""
 
 import numpy as np
 import pytest
+from scipy import stats
 
 from bank_products import fx_forward_strike, par_rate
-from exposure import (HullWhite, collateralised_values, discount_along_paths, effective_epe,
-                      expected_positive_exposure, fx_forward_paths, payer_swap_paths, sa_ccr_ead, simulate_fx,
-                      supervisory_duration)
+from exposure import (HullWhite, calibrate_rate_and_fx, collateralised_values, discount_along_paths, effective_epe,
+                      expected_positive_exposure, exposure_profile, fx_forward_paths, payer_swap_paths, sa_ccr_ead,
+                      simulate_fx, supervisory_duration)
 
 TENORS = np.array([0.25, 0.5, 1, 2, 3, 5, 7, 10, 15, 20, 30])
 CURVE = np.linspace(0.02, 0.035, len(TENORS))
@@ -59,6 +61,55 @@ def test_trades_at_par_are_worth_zero_today_and_their_cash_flows_are_fair():
     assert np.abs(forward[:, 0]).max() < 1e-4
     assert (swap[:, times >= 5 - 1e-9] == 0).all() and (forward[:, times >= 0.5 - 1e-9] == 0).all()
     assert np.count_nonzero(forward_flows[0]) == 1                          # settlement at 6 months
+
+
+def test_exposure_profile_by_hand():
+    values = np.array([[-1.0, 2.0], [3.0, -4.0], [5.0, 6.0], [-7.0, 8.0]])      # 4 paths, 2 dates
+    ee, pfe = exposure_profile(values, 0.975)
+    assert ee == pytest.approx([2.0, 4.0])              # the mean of max(value, 0): (3 + 5) / 4 and (2 + 6 + 8) / 4
+    assert pfe == pytest.approx([4.85, 7.85])           # its 97.5% quantile (numpy): 3 + 0.925 x 2, 6 + 0.925 x 2
+    assert exposure_profile(-np.abs(values), 0.975)[1].tolist() == [0.0, 0.0]   # nothing owed, no exposure
+
+
+def test_the_exposure_of_an_fx_forward_matches_the_lognormal_closed_form():
+    # with deterministic euro rates (Hull-White sigma 0, a flat 3% curve) the forward is worth a X(t) - k on date t,
+    # with X(t) lognormal around its forward F: EE = a F N(d1) - k N(d2), and PFE = a X_q - k, X_q the 97.5% quantile
+    r_eur, r_usd, vol, x0, notional, maturity = 0.03, 0.04, 0.10, 0.9, 1e7, 1.0
+    model = HullWhite(np.full(len(TENORS), r_eur), TENORS, 0.03, 0.0)
+    times, paths = np.array([0.0, 0.25, 0.5, 0.75, 1.0]), 200_000
+    r = model.simulate(times, np.zeros((paths, len(times) - 1)))
+    x = simulate_fx(times, r, x0, r_usd, vol, np.random.default_rng(3).standard_normal((paths, len(times) - 1)))
+    strike = notional * x0 * np.exp((r_eur - r_usd) * maturity)                     # at par
+    ee, pfe = exposure_profile(fx_forward_paths(model, times, r, x, notional, strike, maturity, r_usd)[0], 0.975)
+    for k, t in enumerate(times[1:-1], start=1):
+        a, b = notional * np.exp(-r_usd * (maturity - t)), strike * np.exp(-r_eur * (maturity - t))
+        forward, s = x0 * np.exp((r_eur - r_usd) * t), vol * np.sqrt(t)
+        d1 = (np.log(a * forward / b) + s ** 2 / 2) / s
+        assert ee[k] == pytest.approx(a * forward * stats.norm.cdf(d1) - b * stats.norm.cdf(d1 - s), rel=0.02)
+        assert pfe[k] == pytest.approx(a * forward * np.exp(-s ** 2 / 2 + s * stats.norm.ppf(0.975)) - b, rel=0.02)
+    assert ee[-1] == pfe[-1] == 0.0                                                 # settled at maturity
+
+
+@pytest.mark.parametrize("tenor", [1.0, 5.0])
+def test_the_calibration_recovers_the_parameters_of_a_simulated_market(tenor):
+    # one day of a Hull-White model and an FX rate with known parameters on 100,000 paths: the changes of the zero
+    # rate of `tenor` years (volatility sigma B(0, tenor) / tenor) and of the log FX rate give the parameters back
+    a, sigma, sigma_fx, rho, dt = 0.03, 0.01, 0.08, -0.4, 1 / 250
+    model = HullWhite(CURVE, TENORS, a, sigma)
+    rng = np.random.default_rng(4)
+    z_rate = rng.standard_normal((100_000, 1))
+    z_fx = rho * z_rate + np.sqrt(1 - rho ** 2) * rng.standard_normal(z_rate.shape)
+    r = model.simulate(np.array([0.0, dt]), z_rate)
+    x = simulate_fx(np.array([0.0, dt]), r, 0.9, 0.04, sigma_fx, z_fx)
+
+    def zero_rate(t, short_rate):
+        return -np.log(model.zero_bond(t, t + tenor, short_rate)) / tenor
+
+    d_rate = zero_rate(dt, r[:, 1]) - zero_rate(0.0, r[:, 0])
+    estimate = calibrate_rate_and_fx(d_rate, np.log(x[:, 1] / x[:, 0]), a, tenor)
+    assert estimate["sigma"] == pytest.approx(sigma, rel=0.01)
+    assert estimate["sigma_fx"] == pytest.approx(sigma_fx, rel=0.01)
+    assert estimate["rho"] == pytest.approx(rho, abs=0.01)
 
 
 def test_epe_and_effective_epe():

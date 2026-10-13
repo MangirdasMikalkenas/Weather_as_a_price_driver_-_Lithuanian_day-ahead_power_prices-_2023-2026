@@ -4,12 +4,14 @@ Counterparty exposure of the bank portfolio's derivatives (notebook 05).
 - Rates: a one-factor Hull-White model fitted exactly to today's euro zero curve, simulated exactly on a time grid.
 - FX: the euro value of one US dollar, lognormal, drifting at the euro short rate minus a constant US dollar rate
   (its risk-neutral drift), correlated with the rate.
+- Calibration of the rate volatility, the FX volatility and their correlation from historical daily changes.
 - Values on every path and date of a payer interest rate swap and of an FX forward, exposure profiles (EE, PFE),
   effective EPE as in the Basel internal model method, netting and variation margin with a margin period of risk.
 - The regulatory benchmark: the standardised approach SA-CCR (Basel Committee on Banking Supervision, 2014).
 
 Each function is checked in tests/test_exposure.py: the model reproduces today's curve, discounted prices are
-martingales, trades at par are worth zero today, and SA-CCR matches a calculation by hand.
+martingales, trades at par are worth zero today, the exposure of an FX forward matches its closed form, the
+calibration recovers the parameters of a simulated market, and SA-CCR matches a calculation by hand.
 """
 
 import numpy as np
@@ -73,6 +75,17 @@ def simulate_fx(times, short_rates, x0, foreign_rate, sigma, normals):
         drift = 0.5 * (short_rates[:, k - 1] + short_rates[:, k]) - foreign_rate - 0.5 * sigma ** 2
         x[:, k] = x[:, k - 1] * np.exp(drift * dt + sigma * np.sqrt(dt) * normals[:, k - 1])
     return x
+
+
+def calibrate_rate_and_fx(d_rate, d_log_fx, mean_reversion, tenor=1.0, days_per_year=250):
+    """Hull-White sigma, FX volatility and their correlation from daily changes: `d_rate` of the zero rate of `tenor`
+    years, whose volatility in the model is sigma B(0, tenor) / tenor, and `d_log_fx` of the log exchange rate.
+    Volatilities are annualised with `days_per_year`."""
+    d_rate, d_log_fx = np.asarray(d_rate, float), np.asarray(d_log_fx, float)
+    b = (1 - np.exp(-mean_reversion * tenor)) / mean_reversion
+    return {"sigma": d_rate.std(ddof=1) * np.sqrt(days_per_year) * tenor / b,
+            "sigma_fx": d_log_fx.std(ddof=1) * np.sqrt(days_per_year),
+            "rho": float(np.corrcoef(d_rate, d_log_fx)[0, 1])}
 
 
 def payer_swap_paths(model, times, short_rates, notional, fixed_rate, maturity):

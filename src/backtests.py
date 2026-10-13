@@ -124,17 +124,18 @@ def var_es(pnl, var_level=0.99, es_level=0.975, method="linear"):
     return var, -pnl[pnl <= cutoff].mean()
 
 
-def ewma_volatility(changes, lam=0.94, warmup=30):
+def ewma_volatility(changes, lam=0.94, warmup=30, floor=1e-16):
     """RiskMetrics (EWMA) volatility of each column of `changes`. Row i is the forecast for row i from the rows before
-    it: sigma2[i] = lam sigma2[i-1] + (1 - lam) changes[i-1]^2, started at the variance of the first `warmup` rows.
-    Returns an array of the same shape as `changes`."""
+    it: sigma2[i] = lam sigma2[i-1] + (1 - lam) changes[i-1]^2, started at the variance of the first `warmup` rows and
+    kept at or above `floor`, so that a series that stops moving cannot be divided by zero. Returns an array of the
+    same shape as `changes`."""
     x = np.asarray(changes, dtype=float)
     flat = x.reshape(len(x), -1)
     var = np.empty_like(flat)
     var[0] = flat[:warmup].var(axis=0)
     for i in range(1, len(flat)):
         var[i] = lam * var[i - 1] + (1 - lam) * flat[i - 1] ** 2
-    return np.sqrt(np.maximum(var, 1e-16)).reshape(x.shape)
+    return np.sqrt(np.maximum(var, floor)).reshape(x.shape)
 
 
 def volatility_scaled(changes, sigma, rows, now):

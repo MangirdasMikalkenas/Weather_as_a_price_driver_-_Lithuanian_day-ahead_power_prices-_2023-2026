@@ -27,7 +27,7 @@ Proposed: monthly, the forecast comparison (with the small-sample Diebold–Mari
 
 ## How the models were tested
 
-Walk-forward forecasts fixed in advance with a clean test period; Diebold–Mariano and Giacomini–White tests; exact binomial, Kupiec, Christoffersen, traffic-light (Basel-style at levels other than 99%) and Acerbi–Szekely backtests with sensitivity and stress analyses; P&L attribution, martingale tests and an SA-CCR benchmark; placebo, instrumental-variable and out-of-sample checks of the regressions; and 58 unit tests against independent references, run on every push.
+Walk-forward forecasts fixed in advance with a clean test period; Diebold–Mariano and Giacomini–White tests; exact binomial, Kupiec, Christoffersen, traffic-light (Basel-style at levels other than 99%) and Acerbi–Szekely backtests with sensitivity and stress analyses; P&L attribution, martingale tests and an SA-CCR benchmark; placebo, instrumental-variable and out-of-sample checks of the regressions; and 75 unit tests against independent references and known answers, including the VaR, CFaR, EVE and exposure engines, run on every push.
 
 ## Scope and open issues
 
