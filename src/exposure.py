@@ -10,8 +10,9 @@ Counterparty exposure of the bank portfolio's derivatives (notebook 05).
 - The regulatory benchmark: the standardised approach SA-CCR (Basel Committee on Banking Supervision, 2014).
 
 Each function is checked in tests/test_exposure.py: the model reproduces today's curve, discounted prices are
-martingales, trades at par are worth zero today, the exposure of an FX forward matches its closed form, the
-calibration recovers the parameters of a simulated market, and SA-CCR matches a calculation by hand.
+martingales, trades at par are worth zero today, effective EPE follows the sum of CRR Article 284(6), the exposure
+of an FX forward matches its closed form, the calibration recovers the parameters of a simulated market, and
+SA-CCR matches a calculation by hand.
 """
 
 import numpy as np
@@ -143,18 +144,20 @@ def exposure_profile(values, quantile=0.975):
 
 
 def expected_positive_exposure(times, expected_exposure, horizon=1.0):
-    """EPE: the time average of the expected exposure over [0, horizon]."""
+    """EPE: the time average of the expected exposure over [0, horizon], weighted like effective EPE below: the EE
+    at the end of each step times the length of the step."""
     keep = times <= horizon + 1e-9
     t, ee = times[keep], expected_exposure[keep]
-    return float(np.sum(ee[:-1] * np.diff(t)) / (t[-1] - t[0]))
+    return float(np.sum(ee[1:] * np.diff(t)) / (t[-1] - t[0]))
 
 
 def effective_epe(times, expected_exposure, horizon=1.0):
-    """Effective EPE of the internal model method: the time average over [0, horizon] of the effective expected
-    exposure, the running maximum of EE."""
+    """Effective EPE of the internal model method (CRR Article 284(5)-(6)): effective EE is the running maximum of
+    EE, and effective EPE its weighted average over [0, horizon], the sum over k = 1..n of effective EE at t_k
+    times t_k - t_(k-1). Effective EE at the start of each step instead would understate it, since it never falls."""
     keep = times <= horizon + 1e-9
     t, effective = times[keep], np.maximum.accumulate(expected_exposure[keep])
-    return float(np.sum(effective[:-1] * np.diff(t)) / (t[-1] - t[0]))
+    return float(np.sum(effective[1:] * np.diff(t)) / (t[-1] - t[0]))
 
 
 def supervisory_duration(start, end):

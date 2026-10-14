@@ -44,6 +44,8 @@ MUTATIONS = [   # file in src/, the code, the code with the error, the error
      "PFE taken from the values instead of the positive exposure"),
     ("exposure.py", "- foreign_rate - 0.5 * sigma ** 2", "- foreign_rate",
      "the FX simulation drops the -sigma^2/2 drift correction"),
+    ("exposure.py", "np.sum(effective[1:] * np.diff(t))", "np.sum(effective[:-1] * np.diff(t))",
+     "effective EPE sums effective EE at the start of each step, not at its end as CRR Art. 284(6) does"),
 ]
 
 

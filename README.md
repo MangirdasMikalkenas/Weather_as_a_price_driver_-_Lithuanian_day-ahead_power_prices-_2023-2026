@@ -301,7 +301,7 @@ The statistical tests, pricing functions, risk engines and helpers that the note
 - the VaR and CFaR engines of notebooks 04 and 05 give answers known in advance: a crash enters the next day's forecast but not the same day's, scenarios are revalued on the market of the day before, the historical-simulation VaR of a normal and of a lognormal position matches the closed form, filtered scenarios take the volatility forecast for the day ahead, the stress-window search finds a planted stress period without looking past its review date, and the CFaR and ES of a known window of losses match a calculation by hand;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
 - the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book items discounted at their own rate are worth their amount, the change in EVE of zero-coupon items matches the closed form, with and without the lower bound, a payer hedge at par is worth zero and offsets part of the loss when rates rise, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
-- the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, the expected exposure and PFE of an FX forward match the lognormal closed form, the calibration recovers the volatilities and the correlation of a simulated market from the 1-year and the 5-year rate, and SA-CCR matches a calculation by hand;
+- the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, EPE and effective EPE follow the sums of CRR Article 284(5)–(6), the expected exposure and PFE of an FX forward match the lognormal closed form, the calibration recovers the volatilities and the correlation of a simulated market from the 1-year and the 5-year rate, and SA-CCR matches a calculation by hand;
 - the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
 
 ```bash
@@ -309,7 +309,7 @@ pip install pytest
 pytest -q
 ```
 
-The 75 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top). To check that the tests would notice an error, `python tests/check_mutations.py` plants twelve errors in the engines, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound and others – and confirms that tests fail on each.
+The 75 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top). To check that the tests would notice an error, `python tests/check_mutations.py` plants thirteen errors in the engines, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound, effective EPE summed at the start of each time step and others – and confirms that tests fail on each.
 
 ## Troubleshooting
 

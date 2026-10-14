@@ -112,11 +112,17 @@ def test_the_calibration_recovers_the_parameters_of_a_simulated_market(tenor):
     assert estimate["rho"] == pytest.approx(rho, abs=0.01)
 
 
-def test_epe_and_effective_epe():
+def test_epe_and_effective_epe_follow_the_crr_sums():
+    # CRR Article 284(5)-(6): effective EE_k = max(effective EE_(k-1), EE_k), and effective EPE = the sum over
+    # k = 1..n of effective EE_k x (t_k - t_(k-1)), each step valued at its end
     times = np.array([0, 0.25, 0.5, 0.75, 1.0])
     ee = np.array([0.0, 4.0, 2.0, 6.0, 1.0])
-    assert expected_positive_exposure(times, ee) == pytest.approx((0 + 4 + 2 + 6) * 0.25)
-    assert effective_epe(times, ee) == pytest.approx((0 + 4 + 4 + 6) * 0.25)   # the running maximum of EE
+    assert expected_positive_exposure(times, ee) == pytest.approx((4 + 2 + 6 + 1) * 0.25)
+    assert effective_epe(times, ee) == pytest.approx((4 + 4 + 6 + 6) * 0.25)       # 5.0; 3.5 at the start of steps
+    # unequal steps are weighted by their length, and a netting set maturing within a year is averaged to maturity
+    assert effective_epe(np.array([0, 0.1, 0.5, 1.0]), np.array([1.0, 3.0, 2.0, 5.0])) == pytest.approx(
+        3 * 0.1 + 3 * 0.4 + 5 * 0.5)
+    assert effective_epe(times, ee, horizon=0.5) == pytest.approx((4 + 4) * 0.25 / 0.5)
 
 
 def test_collateral_leaves_only_the_change_over_the_margin_period_and_ignores_payments():

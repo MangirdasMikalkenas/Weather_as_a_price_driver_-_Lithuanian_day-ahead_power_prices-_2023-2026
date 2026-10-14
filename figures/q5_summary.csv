@@ -11,8 +11,8 @@ Stressed VaR against VaR (stress period chosen at each year-end),median ratio 2.
 "IRRBB, worst ΔEVE",parallel up: -21.2 € million (-21.2% of Tier 1)
 "IRRBB, worst ΔEVE by hedge size","0: -50.8%, 250: -21.2%, 500: -13.3%"
 "IRRBB, ΔNII (deposit rates floored at 0%)","parallel up +3.25, parallel down -6.75 € million (a decline of 6.8% of Tier 1 against the 5% outlier threshold); without the floor, parallel down -3.25"
-"PFE, netting set without margin","peak PFE 952,532 €; effective EPE 159,169 €; netting benefit 13%"
-"PFE, with variation margin","effective EPE 57,159 €"
-"PFE, stressed calibration","2008-02-11 – 2011-01-13: effective EPE 255,329 € without margin, 91,232 € with margin; EAD 357,460 € and 127,725 €"
-SA-CCR against the internal model,"2.71 times without margin, 2.61 times with margin"
+"PFE, netting set without margin","peak PFE 952,532 €; effective EPE 167,215 €; netting benefit 13%"
+"PFE, with variation margin","effective EPE 59,649 €"
+"PFE, stressed calibration","2008-02-11 – 2011-01-13: effective EPE 268,262 € without margin, 95,207 € with margin; EAD 375,567 € and 133,290 €"
+SA-CCR against the internal model,"2.58 times without margin, 2.50 times with margin"
 Martingale tests,largest |z| = 1.38
