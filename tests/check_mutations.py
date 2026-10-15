@@ -5,7 +5,7 @@ Each planted error changes the results without crashing anything: a history wind
 volatility, log changes applied as absolute ones, a missing post-shock lower bound and so on. A test suite that still
 passed on such a copy would not have noticed the error.
 
-Run:  python tests/check_mutations.py   (under a minute)
+Run:  python tests/check_mutations.py   (about a minute and a half)
 """
 
 import shutil
@@ -15,7 +15,8 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TESTS = ["tests/test_risk_engines.py", "tests/test_bank_products.py", "tests/test_exposure.py"]
+TESTS = ["tests/test_risk_engines.py", "tests/test_bank_products.py", "tests/test_exposure.py",
+         "tests/test_backtests.py"]
 MUTATIONS = [   # file in src/, the code, the code with the error, the error
     ("risk_engines.py", "return np.arange(t - 1 - window, t - 1)", "return np.arange(t - window, t)",
      "the VaR history includes the change of the day being forecast"),
@@ -33,6 +34,12 @@ MUTATIONS = [   # file in src/, the code, the code with the error, the error
      "the filtered CFaR rescaled to a volatility forecast one day stale"),
     ("risk_engines.py", "starts = np.arange(0, end - length + 1, step)", "starts = np.arange(0, end + 1, step)",
      "the stress-window search looks past its review date"),
+    ("risk_engines.py", "rows = part[:, None] - 1 - window + np.arange(window)",
+     "rows = part[:, None] - window + np.arange(window)",
+     "the rolling VaR of the simulated histories includes the change of the day being forecast"),
+    ("backtests.py", "only_b = int(np.sum(a & ~b)), int(np.sum(b & ~a))",
+     "only_b = int(np.sum(a & ~b)), int(np.sum(b))",
+     "the paired test counts every exception of the second model, not only the days without one of the first"),
     ("bank_products.py", "present_value(liabilities, rate_at) + hedge", "present_value(liabilities, rate_at) - hedge",
      "the banking-book hedge enters EVE with the wrong sign"),
     ("bank_products.py", "return lambda t: shocked_rates(base_rate(t), t, supervisory_shocks(t, sizes)[scenario])",

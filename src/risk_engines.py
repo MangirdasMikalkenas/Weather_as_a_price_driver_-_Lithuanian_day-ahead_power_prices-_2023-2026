@@ -9,6 +9,8 @@ Risk engines of notebooks 04 and 05, kept out of the notebooks so that they can 
   stressed calibration of the exposure model).
 - Rolling VaR-type limits and Expected Shortfall of a series of daily values known with a lag, plain or filtered (the
   cash-flow-at-risk of notebook 04).
+- Synthetic histories for detection rates: blocks of consecutive observed daily changes (a circular block bootstrap)
+  turned back into levels, and the scenario P&L of thousands of forecast days in one revaluation.
 """
 
 import numpy as np
@@ -53,6 +55,38 @@ def scenario_pnl(revalue, levels, changes, kinds, t, rows, scale=None):
         change = changes[name][rows] if scale is None else volatility_scaled(changes[name], scale[name], rows, t - 1)
         moved[name] = apply_changes(today[name], change, kinds[name])
     return revalue(**moved) - revalue(**today)
+
+
+def rolling_scenario_pnl(revalue, levels, changes, kinds, days, window, chunk=200):
+    """scenario_pnl for many forecast days at once: row i is the P&L distribution of day days[i] from the `window`
+    changes known at the close of the day before (history_window), with the same arithmetic but one revaluation for
+    each chunk of days. Returns an array of shape (len(days), window)."""
+    days = np.asarray(days)
+    out = np.empty((len(days), window))
+    for start in range(0, len(days), chunk):
+        part = days[start:start + chunk]
+        rows = part[:, None] - 1 - window + np.arange(window)
+        today = {name: np.asarray(levels[name])[part - 1] for name in levels}
+        moved = {name: apply_changes(today[name][:, None], np.asarray(changes[name])[rows], kinds[name])
+                 for name in levels}
+        flat = {name: value.reshape(len(part) * window, *value.shape[2:]) for name, value in moved.items()}
+        out[start:start + len(part)] = revalue(**flat).reshape(len(part), window) - revalue(**today)[:, None]
+    return out
+
+
+def block_bootstrap_rows(n_rows, length, block, rng):
+    """Rows of one synthetic history: `length` rows of a sample of `n_rows`, in blocks of `block` consecutive rows that
+    start at random rows and wrap around the end of the sample (the circular block bootstrap of Politis & Romano,
+    1992). Within a block the order of the days, and so the clustering of volatility, is kept."""
+    starts = rng.integers(0, n_rows, size=-(-length // block))
+    return ((starts[:, None] + np.arange(block)) % n_rows).ravel()[:length]
+
+
+def levels_from_changes(start, changes, kind="absolute"):
+    """The inverse of daily_changes: the levels of a history that starts at `start` and moves by `changes`."""
+    start, changes = np.asarray(start, dtype=float), np.asarray(changes, dtype=float)
+    path = np.cumsum(changes, axis=0)
+    return np.concatenate([start[None], apply_changes(start, path, kind)])
 
 
 def most_stressful_window(end, length, step, severity):

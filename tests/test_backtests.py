@@ -2,13 +2,12 @@
 
 import numpy as np
 import pytest
-import statsmodels.api as sm
 from scipy import stats
-
 from scipy.signal import lfilter
+from statsmodels.stats.contingency_tables import mcnemar
 
 from backtests import (acerbi_szekely_z2, backtest, christoffersen, diebold_mariano, diebold_mariano_small_sample,
-                       ewma_volatility, giacomini_white, kupiec, pla_zone, traffic_light, var_es,
+                       ewma_volatility, giacomini_white, kupiec, paired_exceptions, pla_zone, traffic_light, var_es,
                        volatility_scaled)
 
 
@@ -169,3 +168,14 @@ def test_volatility_scaling_carries_past_changes_to_the_current_volatility():
     scaled = volatility_scaled(x, sigma, np.arange(1000, 2900), len(x) - 1)
     assert np.std(scaled) == pytest.approx(sigma[-1], rel=0.1)
     assert sigma[-500:].mean() == pytest.approx(2.0, rel=0.1) and sigma[2000:2900].mean() == pytest.approx(1.0, rel=0.1)
+
+
+def test_the_paired_test_counts_the_days_with_one_exception_and_matches_mcnemar():
+    # 10 days with an exception of A only and 2 of B only (3 shared): p = 2 P(X <= 2), X ~ Binomial(12, 0.5)
+    a = np.r_[np.ones(13, dtype=int), np.zeros(85, dtype=int)]
+    b = np.r_[np.zeros(10, dtype=int), np.ones(5, dtype=int), np.zeros(83, dtype=int)]
+    assert paired_exceptions(a, b) == pytest.approx((10, 2, 2 * (1 + 12 + 66) / 2 ** 12))
+    table = [[np.sum(a & b), np.sum(a & (1 - b))], [np.sum((1 - a) & b), np.sum((1 - a) & (1 - b))]]
+    assert paired_exceptions(a, b)[2] == pytest.approx(mcnemar(table, exact=True).pvalue)
+    assert paired_exceptions(a, a)[2] == 1.0                                       # no day tells them apart
+

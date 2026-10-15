@@ -3,7 +3,8 @@ Statistical tests for forecasts and risk models, shared by notebooks 03 and 04.
 
 - Coverage of quantile forecasts and VaR-type limits: Kupiec's proportion-of-failures test, the exact binomial
   test, Christoffersen's independence test and the Basel traffic light, applied as Basel-style binomial zones at
-  other levels and sample sizes (Kupiec, 1995; Christoffersen, 1998; Basel Committee on Banking Supervision, 1996).
+  other levels and sample sizes (Kupiec, 1995; Christoffersen, 1998; Basel Committee on Banking Supervision, 1996),
+  and McNemar's paired test of two models' exceptions on the same days.
 - Expected Shortfall: the Z2 test of Acerbi and Szekely (2014).
 - Forecast accuracy: the Diebold-Mariano and Giacomini-White tests on daily loss differences, and a version of the
   Diebold-Mariano test for short samples (a month of days) with fixed-smoothing critical values.
@@ -47,6 +48,17 @@ def traffic_light(x, n, p):
     yellow, 10 or more red); at other levels or sample sizes they are Basel-style zones, not a regulatory test."""
     cumulative = stats.binom.cdf(x, n, p)
     return "green" if cumulative < 0.95 else ("yellow" if cumulative < 0.9999 else "red")
+
+
+def paired_exceptions(hits_a, hits_b):
+    """Do two VaR models backtested on the same days have the same exception rate? McNemar's exact test: only the days
+    on which exactly one of the two has an exception count, and under the null each such day is equally likely to
+    belong to either model. Like the binomial test, it treats days as independent. Returns (days with an exception of
+    A only, days with an exception of B only, two-sided p-value)."""
+    a, b = np.asarray(hits_a, dtype=bool), np.asarray(hits_b, dtype=bool)
+    only_a, only_b = int(np.sum(a & ~b)), int(np.sum(b & ~a))
+    p = stats.binomtest(only_a, only_a + only_b, 0.5).pvalue if only_a + only_b else 1.0
+    return only_a, only_b, p
 
 
 def backtest(hits, p, min_days_independence=100):

@@ -8,6 +8,8 @@ Stressed VaR against VaR (stress period chosen at each year-end),median ratio 2.
 "Stressed VaR, front-office risk factors against the risk model",median ratio 0.97
 10-day VaR: overlapping changes against the square-root rule,median ratio 0.87
 "P&L attribution, risk model against front office","green: 26, amber: 2 of 28 quarters; R² of the unexplained P&L on the spread change 0.97"
+"Paired test, risk model against front-office risk factors","14 days with an exception of the risk model only, 4 of the front-office risk factors only; McNemar p = 0.031"
+Detection rates in 200 synthetic histories: backtest years / all years since 2004,backtest fails 86% / 80%; paired test finds the proxy 43% / 30%; attribution test flags a window 40% / 86%
 "IRRBB, worst ΔEVE",parallel up: -21.2 € million (-21.2% of Tier 1)
 "IRRBB, worst ΔEVE by hedge size","0: -50.8%, 250: -21.2%, 500: -13.3%"
 "IRRBB, ΔNII (deposit rates floored at 0%)","parallel up +3.25, parallel down -6.75 € million (a decline of 6.8% of Tier 1 against the 5% outlier threshold); without the floor, parallel down -3.25"

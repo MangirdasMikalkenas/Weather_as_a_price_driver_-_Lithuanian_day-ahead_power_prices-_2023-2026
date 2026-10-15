@@ -53,9 +53,10 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 │   ├── notebook_tools.py        # helpers shared by the notebooks (charts, p-values, gaps, cache keys)
 │   ├── bank_products.py         # pricing of a bond, a swap and an FX forward; IRRBB shocks, banking-book EVE and NII
 │   ├── exposure.py              # Hull–White exposure simulation and calibration, PFE, effective EPE, SA-CCR
-│   ├── risk_engines.py          # historical-simulation VaR and CFaR, volatility scaling, search for the stress window
-│   └── backtests.py             # Kupiec, Christoffersen, traffic light, Acerbi–Szekely, Diebold–Mariano (also for short
-│                                #   samples), Giacomini–White, VaR and ES, EWMA volatility scaling, P&L attribution zones
+│   ├── risk_engines.py          # HS VaR and CFaR, volatility scaling, stress-window search, block-bootstrap histories
+│   └── backtests.py             # Kupiec, Christoffersen, McNemar, traffic light, Acerbi–Szekely, Diebold–Mariano
+│                                #   (also for short samples), Giacomini–White, VaR and ES, EWMA volatility scaling,
+│                                #   P&L attribution zones
 ├── tests/                       # tests of the statistics, the risk engines, the helpers and the SQL layer (pytest)
 ├── sql/                         # database schema, cleaning, analysis table, quality checks
 │   ├── 01_schema.sql
@@ -115,7 +116,7 @@ python src/build_db.py               # rebuilds data/lt_power.duckdb and runs th
 | Notebook 02 | under a minute |
 | Notebook 03, first run | about 1.5–2 hours; later runs 5–8 minutes from the stored results |
 | Notebook 04 | under a minute (it reads the stored results of notebook 03) |
-| Notebook 05 | about a minute |
+| Notebook 05 | a few minutes, most of them for the simulated histories of section 5.1 |
 
 ## Setup
 
@@ -262,7 +263,7 @@ The notebooks contain code and section titles only; the interpretation of every 
 | `02_wind_value.ipynb` | What are wind and solar output worth, and how much wind output is held back at negative prices? | H6–H7 | `lt_hourly`, `capture_rates_monthly` | 5 charts, `q2_summary.csv` |
 | `03_forecast.ipynb` | How accurately can tomorrow's hourly prices be forecast, and what is better information worth? | H8–H9 | `lt_hourly_all` and the neighbors' forecasts, capacities and carbon proxy | 8 charts, `q3_summary.csv`, `q3_followup.csv`, `q3_v2_summary.csv` |
 | `04_risk_backtesting.ipynb` | How reliable are the uncertainty estimates: the forecast's 80% intervals and the cash-flow-at-risk of a solar PPA? | H10–H11 | `lt_hourly_all` and the 80% intervals of notebook 03 (`data/processed/q3_intervals.pkl`) | 3 charts, `q4_summary.csv` |
-| `05_bank_portfolio.ipynb` | Do standard checks detect a defect planted on purpose in a bank's VaR model, and what do IRRBB and counterparty-exposure checks show? | – | ECB yield curves and EUR/USD from September 2004 | 4 charts, `q5_summary.csv` |
+| `05_bank_portfolio.ipynb` | Do standard checks detect a defect planted on purpose in a bank's VaR model, and how often would they in other histories? What do IRRBB and counterparty-exposure checks show? | – | ECB yield curves and EUR/USD from September 2004 | 4 charts, `q5_summary.csv` |
 
 A complete run writes 58 files to `figures/`: 25 charts in two formats and 8 CSV tables.
 
@@ -297,8 +298,9 @@ The statistical tests, pricing functions, risk engines and helpers that the note
 - the Acerbi–Szekely statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
 - the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts over 250 days, but about 15% over 26 days; the small-sample version equals the cosine estimator written out by hand and keeps its 5% over 26 days, with and without autocorrelation; the Giacomini–White statistic equals its quadratic form;
 - VaR and ES follow the stated quantile convention (interpolated, or the third-worst of 250 losses), and the P&L attribution zones follow the MAR32 thresholds;
+- McNemar's paired test of two models' exceptions on the same days matches the exact test of statsmodels;
 - the EWMA volatility follows its recursion, and volatility-scaled past changes take on the current volatility;
-- the VaR and CFaR engines of notebooks 04 and 05 give answers known in advance: a crash enters the next day's forecast but not the same day's, scenarios are revalued on the market of the day before, the historical-simulation VaR of a normal and of a lognormal position matches the closed form, filtered scenarios take the volatility forecast for the day ahead, the stress-window search finds a planted stress period without looking past its review date, and the CFaR and ES of a known window of losses match a calculation by hand;
+- the VaR and CFaR engines of notebooks 04 and 05 give answers known in advance: a crash enters the next day's forecast but not the same day's, scenarios are revalued on the market of the day before, the historical-simulation VaR of a normal and of a lognormal position matches the closed form, filtered scenarios take the volatility forecast for the day ahead, the stress-window search finds a planted stress period without looking past its review date, and the CFaR and ES of a known window of losses match a calculation by hand; for the simulated histories, the vectorised rolling VaR equals the day-by-day engine, the bootstrap keeps blocks of consecutive days, and levels rebuilt from the changes match the originals;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
 - the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book items discounted at their own rate are worth their amount, the change in EVE of zero-coupon items matches the closed form, with and without the lower bound, a payer hedge at par is worth zero and offsets part of the loss when rates rise, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
 - the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, EPE and effective EPE follow the sums of CRR Article 284(5)–(6), the expected exposure and PFE of an FX forward match the lognormal closed form, the calibration recovers the volatilities and the correlation of a simulated market from the 1-year and the 5-year rate, and SA-CCR matches a calculation by hand;
@@ -309,7 +311,7 @@ pip install pytest
 pytest -q
 ```
 
-The 75 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top). To check that the tests would notice an error, `python tests/check_mutations.py` plants thirteen errors in the engines, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound, effective EPE summed at the start of each time step and others – and confirms that tests fail on each.
+The 80 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top). To check that the tests would notice an error, `python tests/check_mutations.py` plants fifteen errors in the engines, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound, effective EPE summed at the start of each time step, a paired test that counts the wrong days and others – and confirms that tests fail on each.
 
 ## Troubleshooting
 

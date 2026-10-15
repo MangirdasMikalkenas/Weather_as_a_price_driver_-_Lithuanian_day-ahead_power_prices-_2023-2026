@@ -7,8 +7,8 @@ import pytest
 from scipy import stats
 
 from backtests import var_es
-from risk_engines import (apply_changes, daily_changes, history_window, most_stressful_window, scenario_pnl,
-                          tail_forecasts)
+from risk_engines import (apply_changes, block_bootstrap_rows, daily_changes, history_window, levels_from_changes,
+                          most_stressful_window, rolling_scenario_pnl, scenario_pnl, tail_forecasts)
 
 LOSSES = -np.arange(1, 251, dtype=float)       # 250 outcomes with losses of 1, 2, ..., 250
 
@@ -113,3 +113,33 @@ def test_filtered_tail_forecasts_rescale_the_standardised_history_to_the_latest_
     limits, es, _ = tail_forecasts(sigma * standardised, [t], 250, (0.99,), 0.975, lag, sigma=sigma)
     assert limits[0.99][0] == pytest.approx(sigma[t - lag + 1] * 247.51)
     assert es[0] == pytest.approx(sigma[t - lag + 1] * 247.0)
+
+
+def test_rolling_scenario_pnl_equals_the_daily_engine_day_by_day():
+    # a rate curve (absolute changes) and an exchange rate (log changes), revalued by a non-linear function
+    rng = np.random.default_rng(8)
+    rates = 0.02 + rng.normal(0, 0.001, (400, 3)).cumsum(axis=0)
+    fx = 1.1 * np.exp(rng.normal(0, 0.005, 400).cumsum())
+    levels, kinds = {"rates": rates, "fx": fx}, {"rates": "absolute", "fx": "log"}
+    changes = {name: daily_changes(levels[name], kinds[name]) for name in levels}
+
+    def revalue(rates, fx):
+        return np.exp(-5 * rates).sum(axis=-1) * 1e6 / fx
+
+    days = np.arange(251, 399)
+    one_by_one = np.vstack([scenario_pnl(revalue, levels, changes, kinds, t, history_window(t, 250)) for t in days])
+    assert rolling_scenario_pnl(revalue, levels, changes, kinds, days, 250, chunk=40) == pytest.approx(one_by_one)
+
+
+def test_block_bootstrap_rows_are_blocks_of_consecutive_days_that_wrap_around():
+    rows = block_bootstrap_rows(100, 250, 20, np.random.default_rng(9))
+    assert len(rows) == 250 and rows.min() >= 0 and rows.max() < 100
+    assert all(((block[1:] - block[:-1]) % 100 == 1).all() for block in np.split(rows[:240], 12))
+    assert (rows == block_bootstrap_rows(100, 250, 20, np.random.default_rng(9))).all()      # reproducible
+
+
+@pytest.mark.parametrize("kind", ["absolute", "log"])
+def test_levels_from_changes_rebuild_the_history(kind):
+    levels = np.exp(np.random.default_rng(10).normal(0, 0.01, (60, 2)).cumsum(axis=0))
+    assert levels_from_changes(levels[0], daily_changes(levels, kind), kind) == pytest.approx(levels)
+
