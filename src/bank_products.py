@@ -108,26 +108,32 @@ def shocked_curve(base_rate, scenario, sizes=EUR_SHOCK_SIZES_BP):
 
 
 def banking_book_cash_flows(item):
-    """Times (years) and amounts of an item's principal and interest, annual where they recur. `kind` is "bullet"
-    (interest, then the principal at `years`; one payment when `years` is below one; repaid at once when it is zero),
-    "annuity" (level payments over `years`) or "spread" (principal repaid in equal parts over `years`: the
-    behavioural profile of core non-maturity deposits)."""
+    """Times (years) and amounts of an item's principal and interest, paid once a year. `kind` is "bullet" (interest
+    every year and the principal at `years`; a maturity that is not a whole number of years ends with a shorter
+    period that earns interest in proportion to its length, so a 1.5-year item pays a coupon at 1 and half a coupon
+    with the principal at 1.5; repaid at once when `years` is zero), "annuity" (level payments over `years` whole
+    years) or "spread" (principal repaid in equal parts over `years` whole years, the behavioural profile of core
+    non-maturity deposits). A maturity the schedule cannot represent raises ValueError instead of giving a wrong
+    schedule."""
     amount, rate, years, kind = item["amount"], item["rate"], item["years"], item["kind"]
+    if kind not in ("bullet", "annuity", "spread"):
+        raise ValueError(f"unknown kind of item: {kind}")
+    if years < 0:
+        raise ValueError(f"negative maturity: {years}")
     if kind == "bullet":
-        if years <= 0:
+        if years == 0:
             return np.array([0.0]), np.array([float(amount)])
-        times = np.arange(1, int(np.ceil(years)) + 1, dtype=float) if years >= 1 else np.array([float(years)])
-        flows = np.full(len(times), amount * rate * min(years, 1.0))
+        times = np.append(np.arange(1, np.ceil(years), dtype=float), float(years))   # whole years, then maturity
+        flows = amount * rate * np.diff(np.r_[0.0, times])                            # interest for each period
         flows[-1] += amount
         return times, flows
+    if years < 1 or years != int(years):
+        raise ValueError(f"an item of kind {kind} needs a whole number of years, at least one: {years}")
+    times = np.arange(1, int(years) + 1, dtype=float)
     if kind == "annuity":
-        times = np.arange(1, years + 1, dtype=float)
         payment = amount * rate / (1 - (1 + rate) ** -years) if rate else amount / years
         return times, np.full(len(times), payment)
-    if kind == "spread":
-        times = np.arange(1, years + 1, dtype=float)
-        return times, amount / years + amount * (1 - (times - 1) / years) * rate
-    raise ValueError(f"unknown kind of item: {kind}")
+    return times, amount / years + amount * (1 - (times - 1) / years) * rate
 
 
 def present_value(items, rate_at):

@@ -26,8 +26,17 @@ def linear(x):
 def test_each_days_change_applied_to_that_day_gives_the_next_day(kind):
     levels = np.exp(np.random.default_rng(1).normal(0, 0.01, (50, 3)).cumsum(axis=0))
     assert apply_changes(levels[:-1], daily_changes(levels, kind), kind) == pytest.approx(levels[1:])
-    with pytest.raises(ValueError):
+
+
+def test_changes_are_absolute_unless_said_otherwise_and_other_kinds_are_refused():
+    levels = np.array([1.0, 1.5, 0.5])
+    assert daily_changes(levels).tolist() == [0.5, -1.0]
+    assert apply_changes(1.0, np.array([0.5, -1.0])).tolist() == [1.5, 0.0]
+    assert levels_from_changes(1.0, np.array([0.5, -1.0])).tolist() == [1.0, 1.5, 0.5]
+    with pytest.raises(ValueError, match="unknown kind of change: relative"):
         daily_changes(levels, "relative")
+    with pytest.raises(ValueError, match="unknown kind of change: relative"):
+        apply_changes(1.0, levels, "relative")
 
 
 def test_a_forecast_uses_only_the_changes_known_at_the_close_of_the_day_before():
@@ -87,7 +96,14 @@ def test_the_stress_window_is_the_most_severe_one_known_at_the_time():
 
     assert most_stressful_window(1500, 250, 20, severity).tolist() == list(range(900, 1150))
     assert max(rows.max() for rows in used) < 1500        # no row from row 1500 on was looked at
+    assert all(rows.tolist() == list(range(rows[0], rows[0] + 250)) for rows in used)    # 250 consecutive rows each
     assert most_stressful_window(2000, 250, 20, severity).tolist() == list(range(1600, 1850))
+    # the window that ends on the last row before the review date is a candidate, and with a step of one row the
+    # search still stops there
+    assert most_stressful_window(1850, 250, 20, severity).tolist() == list(range(1600, 1850))
+    used.clear()
+    most_stressful_window(1500, 250, 1, severity)
+    assert max(rows.max() for rows in used) == 1499
 
 
 def test_tail_forecasts_use_the_window_that_ends_lag_days_before():
@@ -101,6 +117,18 @@ def test_tail_forecasts_use_the_window_that_ends_lag_days_before():
     assert limits[0.975][0] == pytest.approx(243.775)     # between the 7th- and 8th-worst
     assert es[0] == pytest.approx(247.0)                  # the mean of the 7 worst losses
     assert sorted(samples[0]) == sorted(LOSSES)
+    # by default a forecast is made at the close of the day before: for day t - 1 it uses the same window
+    limits_next, es_next, _ = tail_forecasts(values, [t - 1], 250, (0.99, 0.975), 0.975)
+    assert limits_next[0.99][0] == limits[0.99][0] and es_next[0] == es[0]
+
+
+def test_tail_forecasts_pass_the_quantile_convention_to_the_limits_and_the_es():
+    # four days that lose 4, 3, 2 and 1, at 70%: "linear" interpolates the limit to 3.1 and keeps only the worst loss
+    # for the ES; "inverted_cdf" takes the second-worst loss as the limit and the two worst for the ES
+    values = np.array([np.nan, -4.0, -3.0, -2.0, -1.0])                  # day 0 is outside the window of day 5
+    for method, limit, shortfall in [("linear", 3.1, 4.0), ("inverted_cdf", 3.0, 3.5)]:
+        limits, es, _ = tail_forecasts(values, [5], 4, (0.7,), 0.7, method=method)
+        assert limits[0.7][0] == pytest.approx(limit) and es[0] == pytest.approx(shortfall)
 
 
 def test_filtered_tail_forecasts_rescale_the_standardised_history_to_the_latest_volatility():
@@ -136,6 +164,8 @@ def test_block_bootstrap_rows_are_blocks_of_consecutive_days_that_wrap_around():
     assert len(rows) == 250 and rows.min() >= 0 and rows.max() < 100
     assert all(((block[1:] - block[:-1]) % 100 == 1).all() for block in np.split(rows[:240], 12))
     assert (rows == block_bootstrap_rows(100, 250, 20, np.random.default_rng(9))).all()      # reproducible
+    # any row can start a block: with one-day blocks, 2,000 rows drawn from 10 include every one of them
+    assert set(block_bootstrap_rows(10, 2000, 1, np.random.default_rng(10)).tolist()) == set(range(10))
 
 
 @pytest.mark.parametrize("kind", ["absolute", "log"])

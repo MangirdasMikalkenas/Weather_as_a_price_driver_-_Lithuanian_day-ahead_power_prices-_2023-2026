@@ -7,3 +7,4 @@ __pycache__/
 *.zip
 *.duckdb
 .pytest_cache/
+mutants/

@@ -62,7 +62,7 @@ def rolling_scenario_pnl(revalue, levels, changes, kinds, days, window, chunk=20
     changes known at the close of the day before (history_window), with the same arithmetic but one revaluation for
     each chunk of days. Returns an array of shape (len(days), window)."""
     days = np.asarray(days)
-    out = np.empty((len(days), window))
+    out = np.full((len(days), window), np.nan)          # a day left out by mistake shows as missing, not as old memory
     for start in range(0, len(days), chunk):
         part = days[start:start + chunk]
         rows = part[:, None] - 1 - window + np.arange(window)

@@ -15,7 +15,7 @@ SLOPED = np.linspace(0.01, 0.035, len(TENORS))
 
 
 def test_interpolation_matrix_matches_numpy_interp_and_stays_flat_outside():
-    times = np.array([0.1, 0.25, 0.8, 4.0, 12.5, 30.0, 40.0])
+    times = np.array([0.1, 0.25, 0.8, 4.0, 12.5, 25.0, 30.0, 40.0])
     w = interpolation_matrix(TENORS, times)
     assert np.allclose(w @ SLOPED, np.interp(times, TENORS, SLOPED))
     assert np.allclose(w.sum(axis=1), 1)
@@ -33,6 +33,13 @@ def test_a_bond_with_the_par_coupon_is_worth_par_and_a_swap_at_the_par_rate_is_w
         k = par_rate(curve, TENORS, 10)
         assert bond_value(curve, TENORS, 1e7, k, 10) == pytest.approx(1e7)
         assert payer_swap_value(curve, TENORS, 2e7, par_rate(curve, TENORS, 5), 5) == pytest.approx(0, abs=1e-6)
+
+
+def test_many_scenario_curves_priced_at_once_give_each_curves_own_value():
+    curves = np.vstack([FLAT, SLOPED, SLOPED + 0.01])          # scenarios x tenors, as the VaR engines revalue them
+    for price in (partial(bond_value, notional=1e7, coupon=0.025, maturity=10), partial(par_rate, maturity=5),
+                  partial(payer_swap_value, notional=2e7, fixed_rate=0.03, maturity=5)):
+        assert price(curves, TENORS) == pytest.approx([price(curve, TENORS) for curve in curves])
 
 
 def test_bond_sensitivity_equals_the_analytic_derivative_on_a_flat_curve():
@@ -59,11 +66,16 @@ def test_fx_forward_is_worth_zero_at_inception_and_loses_when_the_dollar_weakens
 
 
 def test_supervisory_shocks_follow_the_basel_formulas():
-    shocks = supervisory_shocks(np.array([0.0, 1e6]))      # a very long maturity stands for infinity
-    assert shocks["parallel up"] == pytest.approx([0.02, 0.02])
-    assert shocks["short rates up"] == pytest.approx([0.025, 0.0])
-    assert shocks["steepener"] == pytest.approx([-0.65 * 0.025, 0.9 * 0.01])
-    assert shocks["flattener"] == pytest.approx([0.8 * 0.025, -0.6 * 0.01])
+    # at 4 years the short shock has faded to 250 bp x exp(-1) and the long one has grown to 100 bp x (1 - exp(-1));
+    # a very long maturity stands for infinity
+    shocks = supervisory_shocks(np.array([0.0, 4.0, 1e6]))
+    short, long = np.array([0.025, 0.025 * np.exp(-1), 0.0]), np.array([0.0, 0.01 * (1 - np.exp(-1)), 0.01])
+    assert shocks["parallel up"] == pytest.approx([0.02] * 3) and shocks["parallel down"] == pytest.approx([-0.02] * 3)
+    assert shocks["short rates up"] == pytest.approx(short) and shocks["short rates down"] == pytest.approx(-short)
+    assert shocks["steepener"] == pytest.approx(-0.65 * short + 0.9 * long)
+    assert shocks["flattener"] == pytest.approx(0.8 * short - 0.6 * long)
+    assert list(shocks) == ["parallel up", "parallel down", "steepener", "flattener", "short rates up",
+                            "short rates down"]
 
 
 def test_eba_lower_bound_and_its_use():
@@ -80,6 +92,19 @@ def flat(rate):
     return lambda t: np.full(np.shape(t), rate)
 
 
+def test_a_shocked_curve_adds_each_maturitys_shock_to_a_sloped_base_curve():
+    # far above the lower bound, the shocked curve is the base curve plus the shock of each maturity, for any sizes
+    def base(t):
+        return 0.01 + 0.001 * np.asarray(t)               # 1% at 0, rising by 10 bp a year
+
+    times = np.array([1.0, 4.0, 10.0])
+    for scenario in ("steepener", "short rates up"):
+        assert shocked_curve(base, scenario)(times) == pytest.approx(base(times) + supervisory_shocks(times)[scenario])
+    sizes = {"parallel": 100, "short": 150, "long": 50}
+    assert shocked_curve(base, "flattener", sizes)(times) == pytest.approx(
+        base(times) + supervisory_shocks(times, sizes)["flattener"])
+
+
 @pytest.mark.parametrize("item", [dict(amount=500.0, rate=0.035, years=15, kind="annuity"),
                                   dict(amount=150.0, rate=0.025, years=5, kind="bullet"),
                                   dict(amount=300.0, rate=0.005, years=5, kind="spread")])
@@ -93,6 +118,19 @@ def test_short_bullets_pay_once_and_overnight_items_are_repaid_at_once():
     assert times == pytest.approx([0.25]) and flows == pytest.approx([303.0])
     overnight = {"deposits": dict(amount=200.0, rate=0.0, years=0.0, kind="bullet")}
     assert present_value(overnight, flat(0.05)) == pytest.approx(200.0)
+
+
+def test_annuities_pay_level_amounts_and_core_deposits_run_off_in_equal_parts():
+    # a 2-year annuity of 100 at 10% pays 100 x 10% / (1 - 1.1^-2) = 57.62 a year; without interest, 100 / 4 a year
+    # over 4 years; 300 of core deposits at 0.5% over 5 years repay 60 a year plus interest on the balance left
+    def flows(**item):
+        return banking_book_cash_flows(item)[1]
+
+    assert flows(amount=100.0, rate=0.10, years=2, kind="annuity") == pytest.approx([57.6190476] * 2)
+    assert flows(amount=100.0, rate=0.0, years=4, kind="annuity") == pytest.approx([25.0] * 4)
+    assert flows(amount=300.0, rate=0.005, years=5, kind="spread") == pytest.approx([61.5, 61.2, 60.9, 60.6, 60.3])
+    for kind in ("annuity", "spread"):                     # one year is the shortest schedule of either kind
+        assert flows(amount=100.0, rate=0.05, years=1, kind=kind) == pytest.approx([105.0])
 
 
 BOOK_ASSETS = {"fixed-rate mortgages": dict(amount=500.0, rate=0.035, years=15, kind="annuity"),
@@ -111,6 +149,15 @@ def test_nii_change_by_hand_and_the_deposit_floor_makes_it_asymmetric():
     assert nii(-0.02, deposit_floor=None) == pytest.approx(-3.25)
     # -200 bp with a 0% floor: non-core deposits already pay 0%, core deposits fall from 0.5% to 0% instead of -0.5%
     assert nii(-0.02) == pytest.approx(-3.75 - 4.5 + 300 * 0.005)
+    # fixed-rate items that mature after the year do not reprice within it
+    for years in (1.5, 2):
+        bond = {"bond": dict(amount=100.0, rate=0.03, years=years, kind="bullet")}
+        assert nii_change(bond, {}, 0.02, pass_through=0.5) == 0.0
+
+
+def test_the_present_value_of_a_book_is_the_sum_of_its_items():
+    total = present_value(BOOK_ASSETS, flat(0.03))
+    assert total == pytest.approx(sum(present_value({name: item}, flat(0.03)) for name, item in BOOK_ASSETS.items()))
 
 
 def test_the_deposit_floor_never_raises_a_rate_already_below_it():
@@ -152,3 +199,41 @@ def test_a_payer_hedge_at_par_is_worth_zero_and_offsets_part_of_the_eve_loss_whe
     hedge_at_5_percent = 50.0 * ((1 - np.exp(-0.05 * 7)) - k * np.exp(-0.05 * np.arange(1, 8)).sum())
     assert eve(up, 50.0) - eve(up, 0.0) == pytest.approx(hedge_at_5_percent)
     assert eve(up, 0.0) - eve(base, 0.0) < eve(up, 50.0) - eve(base, 50.0) < 0     # a smaller loss, still a loss
+
+
+def replay(times, flows, amount, rate):
+    # the balance left after an item's payments, with interest on the balance for the length of each period
+    balance, previous = float(amount), 0.0
+    for t, flow in zip(times, flows):
+        balance += balance * rate * (t - previous) - flow
+        previous = t
+    return balance
+
+
+def test_a_bullet_with_a_broken_final_year_pays_a_short_last_coupon():
+    # 1.5 years at 4%: 4 at year 1, then half a coupon and the principal at 1.5, not two full coupons and 104 at 2
+    times, flows = banking_book_cash_flows(dict(amount=100.0, rate=0.04, years=1.5, kind="bullet"))
+    assert times.tolist() == [1.0, 1.5] and flows == pytest.approx([4.0, 102.0])
+
+
+@pytest.mark.parametrize("item", [dict(amount=100.0, rate=0.04, years=0.25, kind="bullet"),
+                                  dict(amount=100.0, rate=0.04, years=1, kind="bullet"),
+                                  dict(amount=100.0, rate=0.04, years=1.5, kind="bullet"),
+                                  dict(amount=100.0, rate=0.04, years=7.25, kind="bullet"),
+                                  dict(amount=500.0, rate=0.035, years=15, kind="annuity"),
+                                  dict(amount=300.0, rate=0.005, years=5, kind="spread")])
+def test_every_schedule_ends_at_maturity_and_pays_off_the_balance_exactly(item):
+    times, flows = banking_book_cash_flows(item)
+    # one payment a year, the last at maturity, and together they pay the balance and its interest exactly
+    assert times[-1] == item["years"] and len(times) == np.ceil(item["years"])
+    assert replay(times, flows, item["amount"], item["rate"]) == pytest.approx(0.0, abs=1e-9)
+
+
+@pytest.mark.parametrize("item, reason", [(dict(amount=100.0, rate=0.02, years=2.5, kind="spread"), "whole number"),
+                                          (dict(amount=100.0, rate=0.03, years=2.5, kind="annuity"), "whole number"),
+                                          (dict(amount=100.0, rate=0.03, years=0, kind="annuity"), "at least one"),
+                                          (dict(amount=100.0, rate=0.03, years=-1, kind="bullet"), "negative maturity"),
+                                          (dict(amount=100.0, rate=0.03, years=1, kind="callable"), "unknown kind")])
+def test_maturities_and_kinds_a_schedule_cannot_represent_are_refused(item, reason):
+    with pytest.raises(ValueError, match=reason):
+        banking_book_cash_flows(item)

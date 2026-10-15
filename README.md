@@ -42,6 +42,7 @@ Eleven hypotheses were tested: six were supported, two partly supported and thre
 ├── VALIDATION_SUMMARY.md        # one-page validation summary: decisions and findings by severity
 ├── requirements.txt             # the complete tested environment (pip freeze)
 ├── pytest.ini
+├── setup.cfg                    # settings of mutmut, which checks that the tests catch changes to the engines
 ├── .github/workflows/tests.yml  # runs the tests on every push
 ├── src/                         # data download, processing and database build; shared notebook code
 │   ├── download_entsoe.py
@@ -294,16 +295,16 @@ The statistical tests, pricing functions, risk engines and helpers that the note
 
 - the Basel traffic light reproduces the Basel Committee's table (0–4 exceptions green, 5–9 yellow, 10 or more red at 99% over 250 days), and the same binomial rule gives Basel-style zones at other levels;
 - Kupiec's test agrees with the exact binomial test in large samples and, as expected, misleads in small ones (26 days without a hit: p = 0.019 against the exact 0.104), which is why the notebooks use the exact test there;
-- Christoffersen's statistic equals a Markov likelihood ratio written out by hand, rejects about 5% of independent sequences and detects clustering;
-- the Acerbi–Szekely statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
+- Christoffersen's statistic equals a Markov likelihood ratio written out by hand, rejects about 5% of independent sequences, detects clustering and has nothing to test in a year without exceptions; the backtest summary reports each test, with the conditional coverage test and the independence test from 100 days on;
+- the Acerbi–Szekely statistic and its p-value match a calculation by hand, and the statistic is near zero when the Expected Shortfall is right and clearly negative when losses are understated;
 - the Diebold–Mariano statistic equals a Newey–West statistic computed by hand and rejects about 5% of equally accurate forecasts over 250 days, but about 15% over 26 days; the small-sample version equals the cosine estimator written out by hand and keeps its 5% over 26 days, with and without autocorrelation; the Giacomini–White statistic equals its quadratic form;
 - VaR and ES follow the stated quantile convention (interpolated, or the third-worst of 250 losses), and the P&L attribution zones follow the MAR32 thresholds;
 - McNemar's paired test of two models' exceptions on the same days matches the exact test of statsmodels;
 - the EWMA volatility follows its recursion, and volatility-scaled past changes take on the current volatility;
 - the VaR and CFaR engines of notebooks 04 and 05 give answers known in advance: a crash enters the next day's forecast but not the same day's, scenarios are revalued on the market of the day before, the historical-simulation VaR of a normal and of a lognormal position matches the closed form, filtered scenarios take the volatility forecast for the day ahead, the stress-window search finds a planted stress period without looking past its review date, and the CFaR and ES of a known window of losses match a calculation by hand; for the simulated histories, the vectorised rolling VaR equals the day-by-day engine, the bootstrap keeps blocks of consecutive days, and levels rebuilt from the changes match the originals;
 - the cache keys change with any change in data or code; gaps are filled with past values only; reads with one DuckDB thread repeat aggregates bitwise;
-- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book items discounted at their own rate are worth their amount, the change in EVE of zero-coupon items matches the closed form, with and without the lower bound, a payer hedge at par is worth zero and offsets part of the loss when rates rise, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
-- the exposure model reproduces today's curve, its discounted prices are martingales, trades at par are worth zero with fair cash flows, EPE and effective EPE follow the sums of CRR Article 284(5)–(6), the expected exposure and PFE of an FX forward match the lognormal closed form, the calibration recovers the volatilities and the correlation of a simulated market from the 1-year and the 5-year rate, and SA-CCR matches a calculation by hand;
+- the bond, swap and FX forward prices match closed-form results (par bond, zero-value swap and forward at inception, the analytic duration), also for many scenario curves at once, and the IRRBB shocks and the post-shock lower bound follow the Basel standard and Commission Delegated Regulation (EU) 2024/856; banking-book schedules end at maturity and pay off the balance exactly (a 1.5-year bullet pays half a coupon at 1.5 years), annuities pay level amounts and core deposits run off in equal parts, and maturities a schedule cannot represent are refused; items discounted at their own rate are worth their amount, the change in EVE of zero-coupon items matches the closed form, with and without the lower bound, a payer hedge at par is worth zero and offsets part of the loss when rates rise, and the change in net interest income matches a calculation by hand, with and without the 0% floor on deposit rates;
+- the exposure model reproduces today's curve and forward rates, its bond price and drift match numerical integrals of the model's distribution, each step's random shock moves the rate and the exchange rate in that step, its discounted prices are martingales, trades at par are worth zero with fair cash flows, a swap is worth a new swap at each reset, EPE and effective EPE follow the sums of CRR Article 284(5)–(6), the expected exposure and PFE of an FX forward match the lognormal closed form, the calibration recovers the volatilities and the correlation of a simulated market from the 1-year and the 5-year rate and matches a calculation by hand, and SA-CCR matches calculations by hand for netting within and across maturity buckets, collateral, the multiplier and the maturity floor;
 - the SQL views build on synthetic data, 15-minute prices average to hours, the forecasting input never uses the actual load of the same hour, and `lt_hourly` keeps its fixed period.
 
 ```bash
@@ -311,7 +312,15 @@ pip install pytest
 pytest -q
 ```
 
-The 80 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top). To check that the tests would notice an error, `python tests/check_mutations.py` plants fifteen errors in the engines, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound, effective EPE summed at the start of each time step, a paired test that counts the wrong days and others – and confirms that tests fail on each.
+The 112 tests need no downloaded data and run in seconds. GitHub Actions runs them on every push with the package versions in `requirements.txt` (badge at the top).
+
+Two checks show that the tests would notice an error in the engines. `python tests/check_mutations.py` plants sixteen plausible errors, one at a time – a history window that looks a day ahead, a stale volatility, a missing post-shock lower bound, effective EPE summed at the start of each time step, a paired test that counts the wrong days, a bullet's broken final year rounded up to a whole year and others – and confirms that tests fail on each. For a systematic count, [mutmut](https://github.com/boxed/mutmut) (settings in `setup.cfg`) makes every small change it can in the four engine modules, such as `+` for `-`, `<` for `<=` or a constant changed by one, and runs their tests on each: the tests catch 1,721 of 1,827 changes (94%). Each of the other 106 was reviewed ([tests/mutmut_survivors.md](tests/mutmut_survivors.md)): 102 cannot change a result for the inputs the code is given, 66 of them because they only drop the conversion to float of inputs that are already numbers; 2 matter only at a binomial probability of exactly 95% or 99.99%; and 2 change the seed or the number of simulations of a Monte Carlo p-value. The first run caught 84%; the tests added for the changes it missed revealed no error in the code. mutmut runs on Linux and macOS (on Windows, in WSL):
+
+```bash
+pip install mutmut==3.8.0
+mutmut run        # a few minutes
+mutmut results    # the changes the tests do not catch
+```
 
 ## Troubleshooting
 
